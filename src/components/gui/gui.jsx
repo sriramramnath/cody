@@ -127,6 +127,8 @@ const GUIComponent = props => {
         theme,
         tipsLibraryVisible,
         vm,
+        onSetStageLarge,
+        onSetStageSmall,
         ...componentProps
     } = omit(props, 'dispatch');
     if (children) {
@@ -137,7 +139,6 @@ const GUIComponent = props => {
     const [stageUserWidth, setStageUserWidth] = useState(480);
 
     // callback to set the stage size mode based on the user's defined width
-    const {onSetStageSmall, onSetStageLarge} = props;
     const onResize = useCallback(size => {
         const stageSize = resolveStageSize(stageSizeMode, false);
         if (size < 480 && stageSize !== STAGE_SIZE_MODES.small) {
