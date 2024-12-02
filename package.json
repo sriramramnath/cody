@@ -1,6 +1,6 @@
 {
   "name": "scratch-gui",
-  "version": "4.0.41",
+  "version": "4.1.2",
   "description": "Graphical User Interface for creating and running Scratch 3.0 projects",
   "author": "Massachusetts Institute of Technology",
   "license": "BSD-3-Clause",
@@ -86,7 +86,7 @@
     "redux-throttle": "^0.1.1",
     "scratch-audio": "^1.0.0",
     "scratch-blocks": "^1.1.6",
-    "scratch-l10n": "^3.18.3",
+    "scratch-l10n": "^4.0.0",
     "scratch-paint": "^2.2.151",
     "scratch-render": "^1.0.233",
     "scratch-render-fonts": "^1.0.2",
@@ -142,7 +142,7 @@
     "stream-browserify": "3.0.0",
     "url-loader": "4.1.1",
     "web-audio-test-api": "0.5.2",
-    "webpack": "5.95.0",
+    "webpack": "5.96.1",
     "webpack-cli": "5.1.4",
     "webpack-dev-server": "5.1.0",
     "yauzl": "2.10.0"
