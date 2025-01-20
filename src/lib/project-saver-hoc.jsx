@@ -74,6 +74,11 @@ const ProjectSaverHOC = function (WrappedComponent) {
                 this.reportTelemetryEvent('projectDidLoad');
             }
 
+            if (this.props.saveThumbnailOnLoad && this.props.isShowingWithId &&
+                !prevProps.isShowingWithId) {
+                setTimeout(() => this.storeProjectThumbnail(this.props.reduxProjectId));
+            }
+
             if (this.props.projectChanged && !prevProps.projectChanged) {
                 this.scheduleAutoSave();
             }
@@ -394,6 +399,7 @@ const ProjectSaverHOC = function (WrappedComponent) {
         projectChanged: PropTypes.bool,
         reduxProjectId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
         reduxProjectTitle: PropTypes.string,
+        saveThumbnailOnLoad: PropTypes.bool,
         setAutoSaveTimeoutId: PropTypes.func.isRequired,
         vm: PropTypes.instanceOf(VM).isRequired
     };
@@ -402,7 +408,8 @@ const ProjectSaverHOC = function (WrappedComponent) {
         onRemixing: () => {},
         onSetProjectThumbnailer: () => {},
         onSetProjectSaver: () => {},
-        onUpdateProjectData: saveProjectToServer
+        onUpdateProjectData: saveProjectToServer,
+        saveThumbnailOnLoad: false
     };
     const mapStateToProps = (state, ownProps) => {
         const loadingState = state.scratchGui.projectState.loadingState;
