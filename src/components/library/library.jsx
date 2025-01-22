@@ -232,6 +232,8 @@ class LibraryComponent extends React.Component {
     }
     renderElement (data) {
         const key = this.constructKey(data);
+        const iconSource = getItemImageSource(data);
+        const icons = data.json && data.json.costumes.map(getItemImageSource);
         return (<LibraryItem
             bluetoothRequired={data.bluetoothRequired}
             collaborator={data.collaborator}
@@ -242,7 +244,8 @@ class LibraryComponent extends React.Component {
             hidden={data.hidden}
             iconMd5={data.costumes ? data.costumes[0].md5ext : data.md5ext}
             iconRawURL={data.rawURL}
-            icons={data.costumes}
+            iconSource={iconSource}
+            icons={icons}
             id={key}
             insetIconURL={data.insetIconURL}
             internetConnectionRequired={data.internetConnectionRequired}
