@@ -23,7 +23,7 @@ import poseFaceBlocksIconURL from './poseFace/pose-face.png'
 import poseFaceInsetIconUR from './poseFace/pose-face-small.svg'
 
 import poseHandBlocksIconURL from './poseHand/pose-hand.png'
-import poseHandInsetIconUR from './poseHand/pose-hand-small-3e.svg'
+import poseHandInsetIconUR from './poseHand/pose-hand-small-3.svg'
 
 import teachableMachineIconURL from './teachableMachine/teachable-machine-blocks.png'
 import teachableMachineInsetIconURL from './teachableMachine/teachable-machine-blocks-small.svg'
