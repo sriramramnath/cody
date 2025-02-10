@@ -14,6 +14,10 @@
     align-items: center;
 }
 
+.relative-container {
+   display: none;
+}
+
 
 
 .stage-menu-wrapper-student{
@@ -94,6 +98,7 @@
 }
 .canvas-pos{
     display: none;
+    background-color: #000000;
 }
 
 .canvas-pos{
@@ -263,7 +268,7 @@
         color: #000000;
     }
     .relative-container {
-        /* position: relative; */
+        display: block;
     }
 
     @keyframes slideInFromBottom {
