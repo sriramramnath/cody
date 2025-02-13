@@ -46,6 +46,9 @@ import gdxforInsetIconURL from './gdxfor/gdxfor-small.svg';
 import gdxforConnectionIconURL from './gdxfor/gdxfor-illustration.svg';
 import gdxforConnectionSmallIconURL from './gdxfor/gdxfor-small.svg';
 
+import openMeteoIconURL from './openmeteo/Wether-Learge.png';
+import openMeteoInsetIconURL from './openmeteo/small-wether.png';
+
 export default [
     {
         name: (
@@ -317,5 +320,15 @@ export default [
             />
         ),
         helpLink: 'https://scratch.mit.edu/vernier'
+    },
+    {
+        name: '天気予報',
+        extensionId: 'openmeteo',
+        iconURL: openMeteoIconURL,
+        insetIconURL: openMeteoInsetIconURL,
+        description: '天気予報を取得します',
+        internetConnectionRequired: true,
+        featured: true
     }
+
 ];
