@@ -1,10 +1,10 @@
 # scratch-gui
 
-Scratch GUI is a set of React components that comprise the interface for creating and running Scratch 3.0 projects
+Skrach GUI is a set of React components that comprise the interface for creating and running Scratch 3.0 projects
 
 To open the current build in your browser on Github Pages:
 
-https://scratchfoundation.github.io/scratch-gui/
+U DONT
 
 ## Installation
 
@@ -13,14 +13,14 @@ This requires you to have Git and Node.js installed.
 In your own node environment/application:
 
 ```bash
-npm install https://github.com/scratchfoundation/scratch-gui.git
+npm install https://github.com/the-pixelbot/skrach.git
 ```
 
 If you want to edit/play yourself:
 
 ```bash
-git clone https://github.com/scratchfoundation/scratch-gui.git
-cd scratch-gui
+git clone https://github.com/the-pixelbot/skrach.git
+cd skrach
 npm install
 ```
 
@@ -54,12 +54,12 @@ Here's how to link your local `scratch-gui` code to another project's `node_modu
 
 #### Configuration
 
-1. In your local `scratch-gui` repository's top level:
+1. In your local `skrach` repository's top level:
     1. Make sure you have run `npm install`
     2. Build the `dist` directory by running `BUILD_MODE=dist npm run build`
     3. Establish a link to this repository by running `npm link`
 
-2. From the top level of each repository (such as `scratch-www`) that depends on `scratch-gui`:
+2. From the top level of each repository (such as `skrach-www`) that depends on `skrach-gui`:
     1. Make sure you have run `npm install`
     2. Run `npm link scratch-gui`
     3. Build or run the repository
@@ -67,7 +67,7 @@ Here's how to link your local `scratch-gui` code to another project's `node_modu
 #### Using `npm run watch`
 
 Instead of `BUILD_MODE=dist npm run build`, you can use `BUILD_MODE=dist npm run watch` instead. This will watch for
-changes to your `scratch-gui` code, and automatically rebuild when there are changes. Sometimes this has been
+changes to your `skrach-gui` code, and automatically rebuild when there are changes. Sometimes this has been
 unreliable; if you are having problems, try going back to `BUILD_MODE=dist npm run build` until you resolve them.
 
 #### Oh no! It didn't work!
