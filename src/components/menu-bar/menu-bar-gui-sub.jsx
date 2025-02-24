@@ -298,7 +298,6 @@ class MenuBarGuiSub extends React.Component {
 
 
         if (scratchSubstatus === 'submitted' || scratchSubstatus === 'graded') {
-          console.log('✅ dataReceived for dataReceived', dataReceived);
             const activeSubmission = dataReceived.find(
                 (submission) => String(submission.submissionStatus) == 'submitted' && String(submission.isActive) == String(scratchisActivein),
             );
