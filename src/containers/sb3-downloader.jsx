@@ -4,7 +4,8 @@ import React from 'react'
 import { connect } from 'react-redux'
 import { projectTitleInitialState } from '../reducers/project-title'
 import downloadBlob from '../lib/download-blob'
-import localforage from 'localforage';
+import localforage from 'localforage'
+import { setIsSavingState } from './../reducers/vm-status.js'
 /**
  * Project saver component passes a downloadProject function to its child.
  * It expects this child to be a function with the signature
@@ -20,53 +21,122 @@ import localforage from 'localforage';
  * )}</SB3Downloader>
  */
 class SB3Downloader extends React.Component {
-    constructor (props) {
-        super(props);
-        bindAll(this, [
-            'downloadProject',
-            'downloadLocalStorageProject'
-        ]);
-    }
-    downloadProject () {
-        this.props.saveProjectSb3().then(content => {
-            if (this.props.onSaveFinished) {
-                this.props.onSaveFinished();
+  constructor(props) {
+    super(props)
+    this.abortController = null
+    this.debounceTimeout = null
+    this.previousBase64 = null
+    bindAll(this, ['downloadProject', 'downloadLocalStorageProject'])
+  }
+  downloadProject() {
+    this.props.saveProjectSb3().then((content) => {
+      if (this.props.onSaveFinished) {
+        this.props.onSaveFinished()
+      }
+      downloadBlob(this.props.projectFilename, content)
+    })
+  }
+  downloadLocalStorageProject = async () => {
+    const url = new URLSearchParams(window.location.search)
+
+    const projectId = url.get('projectid')
+    const currentprojectName = url.get('projectname')
+    const inputLayout = url.get('inputLayout')
+
+    if (inputLayout === 'myprojects') {
+      if (this.props.isFirst) {
+        return
+      }
+
+      if (this.debounceTimeout) {
+        clearTimeout(this.debounceTimeout)
+      }
+
+      this.debounceTimeout = setTimeout(async () => {
+        if (this.abortController) {
+          this.abortController.abort()
+        }
+
+        this.abortController = new AbortController()
+        const signal = this.abortController?.signal
+
+        this.props.saveProjectSb3().then((content) => {
+          if (this.props.onSaveFinished) {
+            this.props.onSaveFinished()
+          }
+
+          const reader = new FileReader()
+          reader.onloadend = async () => {
+            const buffer = reader.result
+            const binaryString = Array.prototype.map
+              .call(new Uint8Array(buffer), (x) => String.fromCharCode(x))
+              .join('')
+            let base64blocks = btoa(
+              new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), ''),
+            )
+
+            if (this.previousBase64 === base64blocks) {
+              return
             }
-            downloadBlob(this.props.projectFilename, content);
-        });
-    }
-    downloadLocalStorageProject = async () => {
-        const projectName = await localforage.getItem('Current_Project_Name');
-        this.props.saveProjectSb3().then(content => {
-            if (this.props.onSaveFinished) {
-                this.props.onSaveFinished();
+            this.previousBase64 = base64blocks
+
+            const structure = {
+              name: currentprojectName,
+              projectType: 'scratch',
+              content: base64blocks,
             }
-            // Convert the Blob to an ArrayBuffer
-            const reader = new FileReader();
-            reader.onloadend = async() => {
-                // Save the ArrayBuffer to local storage as a string
-                const buffer = reader.result;
-                const binaryString = Array.prototype.map.call(new Uint8Array(buffer), x => String.fromCharCode(x)).join('');
-                let base64blocks = btoa(
-                    new Uint8Array(buffer)
-                        .reduce((data, byte) => data + String.fromCharCode(byte), '')
-                );
-                await localforage.setItem(projectName, binaryString);
-                await localforage.setItem('assignmentProgress', base64blocks);
-            };
-            reader.readAsArrayBuffer(content);
-        });
+
+            const structureString = JSON.stringify(structure)
+
+            const apiUrl = `https://api.stage-uae.myqubit.co/projects/${projectId}`
+
+            try {
+              this.props.setIsSavingState(true)
+              await fetch(apiUrl, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: structureString,
+                credentials: 'include',
+                signal,
+              })
+            } catch (error) {
+              console.error('Error:', error)
+            } finally {
+              this.props.setIsSavingState(false)
+            }
+          }
+          reader.readAsArrayBuffer(content)
+        })
+      }, 500)
+    } else {
+      const projectName = await localforage.getItem('Current_Project_Name')
+      this.props.saveProjectSb3().then((content) => {
+        if (this.props.onSaveFinished) {
+          this.props.onSaveFinished()
+        }
+        const reader = new FileReader()
+        reader.onloadend = async () => {
+          const buffer = reader.result
+          const binaryString = Array.prototype.map
+            .call(new Uint8Array(buffer), (x) => String.fromCharCode(x))
+            .join('')
+          let base64blocks = btoa(
+            new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), ''),
+          )
+          await localforage.setItem(projectName, binaryString)
+          await localforage.setItem('assignmentProgress', base64blocks)
+        }
+        reader.readAsArrayBuffer(content)
+      })
     }
-    render () {
-        const {
-            children
-        } = this.props;
-        return children(
-            this.props.className,
-            this.downloadProject,
-            this.downloadLocalStorageProject
-        );
-    }
+  }
+
+  render() {
+    const { children } = this.props
+    return children(this.props.className, this.downloadProject, this.downloadLocalStorageProject)
+  }
 }
 
 const getProjectFilename = (curTitle, defaultTitle) => {
@@ -90,10 +160,12 @@ SB3Downloader.defaultProps = {
 
 const mapStateToProps = (state) => ({
   saveProjectSb3: state.scratchGui.vm.saveProjectSb3.bind(state.scratchGui.vm),
+  isFirst: state.scratchGui.vmStatus.isFirst,
   projectFilename: getProjectFilename(state.scratchGui.projectTitle, projectTitleInitialState),
 })
 
-export default connect(
-  mapStateToProps,
-  () => ({}), // omit dispatch prop
-)(SB3Downloader)
+const mapDispatchToProps = {
+  setIsSavingState,
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(SB3Downloader)

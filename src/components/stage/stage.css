@@ -10,7 +10,7 @@
     display: block;
 
     border-radius: $space;
-    border: $stage-standard-border-width solid $ui-black-transparent;
+    border: $stage-standard-border-width solid $ui-black-transparent !important;
     overflow: hidden;
 
     /* @todo: This is for overriding the value being set somewhere. Where is it being set? */

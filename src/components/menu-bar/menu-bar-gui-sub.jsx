@@ -53,6 +53,7 @@ import {
   remixProject,
   saveProjectAsCopy,
 } from "../../reducers/project-state";
+import {setIsLoadingState, setIsFirstState } from '../../reducers/vm-status.js';
 import {
   openAboutMenu,
   closeAboutMenu,
@@ -99,6 +100,9 @@ import oldtimeyLogo from "./oldtimey-logo.svg";
 import sharedMessages from "../../lib/shared-messages";
 import { ChevronDoubleDownIcon, FolderIcon } from "@heroicons/react/24/outline";
 import localforage from 'localforage';
+import data from './content.json';
+import { config } from "../../../config.js";
+
 
 class MenuBarGuiSub extends React.Component {
   constructor(props) {
@@ -140,9 +144,7 @@ class MenuBarGuiSub extends React.Component {
     }
   };
   
-  componentDidMount() {
-    document.addEventListener("keydown", this.handleKeyPress);
-  }
+
   componentWillUnmount() {
     document.removeEventListener("keydown", this.handleKeyPress);
   }
@@ -250,28 +252,119 @@ class MenuBarGuiSub extends React.Component {
     };
   }
 
-  async componentDidMount() {
-    const currentLayout = await localforage.getItem('currentLayout');
-    this.setState({ currentLayout });
-    if(currentLayout === 'teacher') {
-      this.onLocalStorageFileUploadTeacher()
-    } else if(currentLayout === 'student'){
-      this.onLocalStorageFileUploadStudent()
+  getProjectIdFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get("id") || null;
+  }
+
+  async fetchProjectData(projectId) {
+    if (!projectId) return;
+
+    try {
+      const apiUrl = `${config.API_URL}/projects/${projectId}`;
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error fetching project:", error);
     }
-    else if(currentLayout === 'ico'){
-      this.onLocalStorageFileUploadStudent()
+  }
+
+  async fetchProjectDataTeacher(scratchElementSettingsId, scratchSubmissionType, scratchUserId, scratchSubstatus, scratchisActivein) {
+    if (!scratchElementSettingsId) return;
+
+    try {
+        const apiUrl = `${config.API_URL}/challenges/user-submission/${scratchElementSettingsId}?user=${scratchUserId}&type=${scratchSubmissionType}&filter=all`;
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+        });
+
+        const dataReceived = await response.json();
+
+        if (!Array.isArray(dataReceived) || dataReceived.length === 0) {
+            console.error("No valid submissions found in API response.");
+            return null;
+        }
+
+
+        if (scratchSubstatus === 'submitted' || scratchSubstatus === 'graded') {
+          console.log('✅ dataReceived for dataReceived', dataReceived);
+            const activeSubmission = dataReceived.find(
+                (submission) => String(submission.submissionStatus) == 'submitted' && String(submission.isActive) == String(scratchisActivein),
+            );
+            if(activeSubmission) {
+              return activeSubmission.submission
+            }        
+        }
+
+        if (scratchSubstatus === 'resubmitted' || scratchSubstatus === 'graded') {
+              if (dataReceived && Array.isArray(dataReceived)) {
+                  const activeResubmission = dataReceived.find(
+                      (resub) => String(resub.submissionStatus) === 'resubmitted' && String(resub.isActive) === String(scratchisActivein),
+                  );
+                  if (activeResubmission) {
+                      return activeResubmission.submission;
+                  }
+              } else {
+                  console.error("Data received is not an array or is undefined");
+              }
+      }
+      
+    } catch (error) {
+        console.error("Error fetching project:", error);
+        return null;
     }
-    else {
-      localforage.getItem('Current_Project_Name')
-        .then(projectName => {
-            this.setState({ projectName });
-        })
-        .then(() => this.onLocalStorageFileUpload())
-        .catch((error) => 
-            console.log('')
-        );
-    }
-    
+}
+
+
+
+async componentDidMount() {
+  document.addEventListener("keydown", this.handleKeyPress);
+  const url = new URLSearchParams(window.location.search);
+  
+  const projectId = url.get('projectid');
+  const currentprojectName = url.get('projectname');
+  const currentLayout = url.get('inputLayout');
+  let result;
+
+  const scratchElementSettingsId = url.get('scratchElementSettingsId');
+  const scratchSubmissionType = url.get('scratchSubmissionType');
+  const scratchUserId = url.get('scratchUserId');
+  const scratchSubstatus = url.get('scratchSubstatus');
+  const scratchisActivein = url.get('scratchisActivein');
+
+  this.setState({ currentLayout });
+
+  try {
+      if (currentLayout === 'teacher') {
+          result = await this.fetchProjectDataTeacher(scratchElementSettingsId, scratchSubmissionType, scratchUserId, scratchSubstatus, scratchisActivein);
+          this.onLocalStorageFileUploadTeacher(result);
+      } else if (currentLayout === 'myprojects') {
+          this.props.onClickLoadingTrue();
+          result = await this.fetchProjectData(projectId);
+          this.onLocalStorageFileUploadStudentICO(result.content);
+      } else if (currentLayout === 'student') {
+          this.onLocalStorageFileUploadStudent();
+      } else {
+          const projectName = await localforage.getItem('Current_Project_Name');
+          this.setState({ projectName });
+          this.onLocalStorageFileUpload();
+      }
+  } catch (error) {
+      this.props.onClickLoadingFalse();
+  } finally {
+      this.props.onClickLoadingFalse();
+  }
 }
 
   componentDidUpdate(prevProps) {
@@ -284,7 +377,6 @@ class MenuBarGuiSub extends React.Component {
 
   async onLocalStorageFileUploadStudent() {
     let base64blocks = await localforage.getItem('ScratchStudentSubmission');
-    console.log('loaded from scratch', base64blocks)
     let binaryString = atob(base64blocks);
     let bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
@@ -292,6 +384,17 @@ class MenuBarGuiSub extends React.Component {
     }
     await new Promise(resolve => setTimeout(resolve, 500));
     await this.props.vm.loadProject(bytes.buffer);
+  }
+
+  async onLocalStorageFileUploadStudentICO(base64blocks) {
+    let binaryString = atob(base64blocks);
+    let bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await this.props.vm.loadProject(bytes.buffer);
+    this.props.onClickFirstFalse();
   }
 
   async onLocalStorageFileUpload() {
@@ -305,12 +408,10 @@ class MenuBarGuiSub extends React.Component {
             await this.props.vm.loadProject(buffer);
         }
     } else {
-        // console.error('No project found in local storage');
     }
 }
 
-  async onLocalStorageFileUploadTeacher() {
-    let base64blocks = await localforage.getItem('loadteacher');
+  async onLocalStorageFileUploadTeacher(base64blocks) {
     let binaryString = atob(base64blocks);
     let bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
@@ -461,6 +562,10 @@ class MenuBarGuiSub extends React.Component {
               </SB3Downloader>
             </div>
             <FolderIcon className={styles.fileDropDown} />
+            
+            {this.props.isSaving && <span className={styles.loadingState}>Saving data <div className={styles.loader}></div></span>}
+            {this.props.isLoading&&<span className={styles.loadingState}>Fetching data, please wait <div className={styles.loader}></div></span>}
+
             <MenuBarMenu
               className={classNames(styles.menuBarMenu)}
               open={this.props.fileMenuOpen}
@@ -570,6 +675,9 @@ const mapStateToProps = (state, ownProps) => {
     mode2020: isTimeTravel2020(state),
     modeNow: isTimeTravelNow(state),
     flagClicked: state.scratchGui.vmStatus.flagClicked,
+    isSaving: state.scratchGui.vmStatus.isSaving,
+    isFirst: state.scratchGui.vmStatus.isFirst,
+    isLoading: state.scratchGui.vmStatus.isLoading,
     autoSave: state.scratchGui.vmStatus.autoSave,
   };
 };
@@ -597,6 +705,10 @@ const mapDispatchToProps = (dispatch) => ({
   onClickSaveAsCopy: () => dispatch(saveProjectAsCopy()),
   onSeeCommunity: () => dispatch(setPlayer(true)),
   onSetTimeTravelMode: (mode) => dispatch(setTimeTravel(mode)),
+  onClickFirst: () => dispatch(setFirst()),
+  onClickFirstFalse: () => dispatch(setIsFirstState(false)),
+  onClickLoadingFalse: () => dispatch(setIsLoadingState(false)),
+  onClickLoadingTrue: () => dispatch(setIsLoadingState(true)),
 });
 
 export default compose(

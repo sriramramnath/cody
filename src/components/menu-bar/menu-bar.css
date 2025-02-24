@@ -32,8 +32,50 @@
     /* border: 1px solid #e0e0e0;    */
     /* border-radius: 5px; */
     color: $ui-white;
-    /* padding: 1rem 0.3rem 1rem 0.3rem; */
+    /* padding: 1rem 0.3rem 1
+    rem 0.3rem; */
 }
+
+.loading-state{
+    width: 15rem;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+    margin-left: 1rem;
+    font-size: 0.8rem;
+    color: #855CD6;
+}
+
+.loader {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: block;
+    margin:10px auto;
+    position: relative;
+    color: #855CD6;
+    box-sizing: border-box;
+    animation: animloader 1s linear infinite alternate;
+  }
+  
+  @keyframes animloader {
+    0% {
+        box-shadow: -20px -6px, -7px 0, 7px 0, 20px 0;
+    }
+    33% {
+        box-shadow: -20px 0px, -7px -6px, 7px 0, 20px 0;
+    }
+    66% {
+        box-shadow: -20px 0px, -7px 0, 7px -6px, 20px 0;
+    }
+    100% {
+        box-shadow: -20px 0, -7px 0, 7px 0, 20px -6px;
+    }
+}
+  
+        
 
 .main-menu {
     display: flex;

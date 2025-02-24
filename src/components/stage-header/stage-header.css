@@ -24,7 +24,7 @@
     justify-content: flex-end;
     flex-shrink: 0;
     align-items: center;
-    background-color: white;
+    background-color: #FAFAFA;
     height: $stage-menu-height;
     padding-left: 1rem;
     /* padding-top: $space; */
