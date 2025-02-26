@@ -246,7 +246,7 @@ class MenuBarGuiSub extends React.Component {
     if (!projectId) return
     this.props.onClickLoadingTrue()
     try {
-      const apiUrl = `${fetchapiurl}projects/${projectId}`
+      const apiUrl = `${fetchapiurl}/projects/${projectId}`
       const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
@@ -274,7 +274,7 @@ class MenuBarGuiSub extends React.Component {
     if (!scratchElementSettingsId) return
 
     try {
-      const apiUrl = `${fetchapiurl}challenges/user-submission/${scratchElementSettingsId}?user=${scratchUserId}&type=${scratchSubmissionType}&filter=all`
+      const apiUrl = `${fetchapiurl}/challenges/user-submission/${scratchElementSettingsId}?user=${scratchUserId}&type=${scratchSubmissionType}&filter=all`
       const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
