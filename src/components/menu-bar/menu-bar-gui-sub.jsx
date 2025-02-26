@@ -385,6 +385,9 @@ class MenuBarGuiSub extends React.Component {
   }
 
   async onLocalStorageFileUploadStudentICO(base64blocks) {
+    if(base64blocks === null) {
+      this.props.onClickFirstFalse()
+    }
     let binaryString = atob(base64blocks)
     let bytes = new Uint8Array(binaryString.length)
     for (let i = 0; i < binaryString.length; i++) {
