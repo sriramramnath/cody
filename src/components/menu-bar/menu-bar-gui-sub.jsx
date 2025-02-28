@@ -350,9 +350,7 @@ class MenuBarGuiSub extends React.Component {
         )
         this.onLocalStorageFileUploadTeacher(result)
       } else if (currentLayout === 'myprojects') {
-        console.log('console debug projectId', projectId, currentLayout, fetchapiurl)
         result = await this.fetchProjectData(projectId, fetchapiurl)
-        console.log('console debug result', result)
         this.onLocalStorageFileUploadStudentICO(result.content)
       } else if (currentLayout === 'student') {
         this.onLocalStorageFileUploadStudent()
@@ -390,7 +388,6 @@ class MenuBarGuiSub extends React.Component {
     if(base64blocks === null) {
       this.props.onClickFirstFalse()
     }
-    console.log('console debug', base64blocks)
     let binaryString = atob(base64blocks)
     let bytes = new Uint8Array(binaryString.length)
     for (let i = 0; i < binaryString.length; i++) {
