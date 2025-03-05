@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { projectTitleInitialState } from '../reducers/project-title'
 import downloadBlob from '../lib/download-blob'
 import localforage from 'localforage'
-import { setIsSavingState } from './../reducers/vm-status.js'
+import { setIsSavingState, setIsScratchData } from './../reducers/vm-status.js'
 /**
  * Project saver component passes a downloadProject function to its child.
  * It expects this child to be a function with the signature
@@ -128,6 +128,7 @@ class SB3Downloader extends React.Component {
           let base64blocks = btoa(
             new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), ''),
           )
+          this.props.setIsScratchData(base64blocks)
           await localforage.setItem(projectName, binaryString)
           await localforage.setItem('assignmentProgress', base64blocks)
         }
@@ -169,6 +170,7 @@ const mapStateToProps = (state) => ({
 
 const mapDispatchToProps = {
   setIsSavingState,
+  setIsScratchData,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(SB3Downloader)

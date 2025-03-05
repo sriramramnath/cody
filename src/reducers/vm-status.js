@@ -4,6 +4,7 @@ const SET_STARTED_STATE = "scratch-gui/vm-status/SET_STARTED_STATE";
 const SET_FLAG_CLICKED_STATE = "scratch-gui/vm-status/SET_FLAG_CLICKED_STATE";
 const SET_IS_SAVING_STATE = "scratch-gui/vm-status/SET_IS_SAVING_STATE";
 const SET_IS_FIRST_STATE = "scratch-gui/vm-status/SET_IS_FIRST_STATE";
+const SET_IS_SCRATCH_DATA = "scratch-gui/vm-status/SET_IS_SCRATCH_DATA";
 const SET_IS_LOADING_STATE = "scratch-gui/vm-status/SET_IS_LOADING_STATE";
 const SET_SPRITE_CLICKED_STATE =
     "scratch-gui/vm-status/SET_SPRITE_CLICKED_STATE";
@@ -20,6 +21,7 @@ const initialState = {
     costumeURLFax: "",
     isSaving: false,
     isFirst: true,
+    isScratchData: "",
     isLoading: false,
 };
 
@@ -49,6 +51,10 @@ const reducer = function (state, action) {
         case SET_IS_FIRST_STATE:
             return Object.assign({}, state, {
                 isFirst: action.isFirst,
+            });
+        case SET_IS_SCRATCH_DATA:
+            return Object.assign({}, state, {
+                isScratchData: action.isScratchData,
             });
         case SET_IS_LOADING_STATE:
             return Object.assign({}, state, {
@@ -113,6 +119,13 @@ const setIsFirstState = function (isFirst) {
     };
 };
 
+const setIsScratchData = function (isScratchData) {
+    return {
+        type: SET_IS_SCRATCH_DATA,
+        isScratchData: isScratchData,
+    };
+};
+
 const setIsLoadingState = function (isLoading) {
     return {
         type: SET_IS_LOADING_STATE,
@@ -150,6 +163,7 @@ export {
     setFlagClickedState,
     setIsSavingState,
     setIsFirstState,
+    setIsScratchData,
     setIsLoadingState,
     setSpriteClickedState,
     setCostumeClickedState,

@@ -48,6 +48,7 @@ import sharedMessages from '../../lib/shared-messages'
 import SB3Downloader from '../../containers/sb3-downloader.jsx'
 
 import MenuBarGuiSub from '../menu-bar/menu-bar-gui-sub.jsx'
+import { usePenpalParent } from '@weblivion/react-penpal';
 
 const messages = defineMessages({
   addExtension: {
@@ -134,6 +135,7 @@ const GUIComponent = (props) => {
     tipsLibraryVisible,
     vm,
     spriteClicked,
+    isScratchData,
     ...componentProps
   } = omit(props, 'dispatch')
   if (children) {
@@ -152,7 +154,22 @@ const GUIComponent = (props) => {
   if (isRendererSupported === null) {
     isRendererSupported = Renderer.isSupported()
   }
-  const [currentLayout, setCurrentLayout] = React.useState('normal')
+  const [currentLayout, setCurrentLayout] = React.useState('student')
+  const [message, setMessage] = React.useState('');
+  const [value, setValue] = React.useState(0);
+  const { parentMethods, connection } = usePenpalParent({
+    methods: {
+      getScratchState(message) {
+        setMessage(message);
+      },
+    },
+  });
+
+  useEffect(() => {
+    if (connection) {
+      parentMethods.updateStateFromScratch(isScratchData);
+    }
+  }, [connection, parentMethods, isScratchData]);
 
   useEffect(() => {
     localforage.getItem('currentLayout').then(value => {
@@ -474,6 +491,7 @@ const mapStateToProps = (state) => ({
   stageSizeMode: state.scratchGui.stageSize.stageSize,
   theme: state.scratchGui.theme.theme,
   spriteClicked: state.scratchGui.vmStatus.spriteClicked,
+  isScratchData: state.scratchGui.vmStatus.isScratchData,
 })
 
 const mapDispatchToProps = {

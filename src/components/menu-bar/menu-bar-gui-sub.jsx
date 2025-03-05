@@ -321,6 +321,57 @@ class MenuBarGuiSub extends React.Component {
     }
   }
 
+  async fetchStudentSubmissionData(challengeId, chapterId, unitId, courseId, fetchapiurl) {
+    try {
+      const apiUrl = `${fetchapiurl}/challenges/details/${challengeId}?chapter=${chapterId}&unit=${unitId}&course=${courseId}`
+      const data = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      })
+      const response = await data.json()
+      if (
+        response.challengeSettings[0].allowResubmission === false &&
+        response.challengeSettings[0].challengeSubmissions.length > 1
+      ) {
+        const selectedsub = response.challengeSettings[0].challengeSubmissions.find(
+          (submission) => {
+            return submission.isActive === true
+          },
+        )
+        if (selectedsub) {
+          return selectedsub.submission
+        }
+      } else if (response.challengeSettings[0].allowResubmission === true) {
+        return null
+      } else {
+        return response?.challengeSettings[0]?.challengeSubmissions[0]?.submission
+      }
+    } catch (error) {
+      console.log('Error fetching student submission:', error)
+    } 
+  }
+
+  async fetchChpaterData(scratchUrl) {
+    if (!scratchUrl) return
+    try {
+      const response = await fetch(scratchUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      })
+      const data = await response.json()
+      console.log('Chapter data:', data)
+      return data
+    } catch (error) {
+      console.error('Error fetching project:', error)
+    }
+  }
+
   async componentDidMount() {
     document.addEventListener('keydown', this.handleKeyPress)
     const url = new URLSearchParams(window.location.search)
@@ -335,6 +386,15 @@ class MenuBarGuiSub extends React.Component {
     const scratchSubstatus = url.get('scratchSubstatus')
     const scratchisActivein = url.get('scratchisActivein')
     const fetchapiurl = url.get('fetchapiurl')
+
+
+    const challengeId = url.get('challengeId')
+    const chapterId = url.get('chapterId')
+    const unitId = url.get('unitId')
+    const courseId = url.get('courseId')
+
+
+    const scratchUrl = url.get('scratchUrl')
 
     this.setState({ currentLayout })
 
@@ -352,8 +412,12 @@ class MenuBarGuiSub extends React.Component {
       } else if (currentLayout === 'myprojects') {
         result = await this.fetchProjectData(projectId, fetchapiurl)
         this.onLocalStorageFileUploadStudentICO(result.content)
+      } else if (currentLayout === 'chapter') {
+        result = await this.fetchChpaterData(scratchUrl, fetchapiurl)
+        this.onLocalStorageFileUploadStudentICO(result.content)
       } else if (currentLayout === 'student') {
-        this.onLocalStorageFileUploadStudent()
+        result = await this.fetchStudentSubmissionData(challengeId, chapterId, unitId, courseId, fetchapiurl)
+        this.onLocalStorageFileUploadStudent(result)
       } else {
         const projectName = await localforage.getItem('Current_Project_Name')
         this.setState({ projectName })
@@ -373,8 +437,7 @@ class MenuBarGuiSub extends React.Component {
     }
   }
 
-  async onLocalStorageFileUploadStudent() {
-    let base64blocks = await localforage.getItem('ScratchStudentSubmission')
+  async onLocalStorageFileUploadStudent(base64blocks) {
     let binaryString = atob(base64blocks)
     let bytes = new Uint8Array(binaryString.length)
     for (let i = 0; i < binaryString.length; i++) {
