@@ -31,6 +31,8 @@ import DragLayer from '../../containers/drag-layer.jsx';
 import ConnectionModal from '../../containers/connection-modal.jsx';
 import TelemetryModal from '../telemetry-modal/telemetry-modal.jsx';
 
+import Header from '../header/header.jsx';
+
 import layout, {STAGE_SIZE_MODES} from '../../lib/layout-constants';
 import {resolveStageSize} from '../../lib/screen-utils';
 import {themeMap} from '../../lib/themes';
@@ -165,6 +167,11 @@ const GUIComponent = props => {
                 dir={isRtl ? 'rtl' : 'ltr'}
                 {...componentProps}
             >
+
+                <Header 
+                    title="scratch少儿编程大师" 
+                    logo='../../../static/logo.png'
+                />
                 {telemetryModalVisible ? (
                     <TelemetryModal
                         isRtl={isRtl}
