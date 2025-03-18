@@ -103,7 +103,7 @@ class SB3Downloader extends React.Component {
                 signal,
               })
             } catch (error) {
-              console.error('Error in sb3:', error)
+              console.error('Error in sb3-:', error)
               localforage.setItem('savingStatus',false)
             } finally {
               this.props.setIsSavingState(false)
