@@ -293,7 +293,7 @@ class MenuBarGuiSub extends React.Component {
       if (scratchSubstatus === 'submitted' || scratchSubstatus === 'graded') {
         const activeSubmission = dataReceived.find(
           (submission) =>
-            String(submission.submissionStatus) == 'submitted' &&
+            (String(submission.submissionStatus) == 'submitted' || String(submission.submissionStatus) == 'graded') &&
             String(submission.isActive) == String(scratchisActivein),
         )
         if (activeSubmission) {
@@ -305,7 +305,7 @@ class MenuBarGuiSub extends React.Component {
         if (dataReceived && Array.isArray(dataReceived)) {
           const activeResubmission = dataReceived.find(
             (resub) =>
-              String(resub.submissionStatus) === 'resubmitted' &&
+              (String(resub.submissionStatus) === 'resubmitted' || String(submission.submissionStatus) == 'graded')&&
               String(resub.isActive) === String(scratchisActivein),
           )
           if (activeResubmission) {
