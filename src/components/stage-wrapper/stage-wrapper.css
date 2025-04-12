@@ -205,7 +205,6 @@
     .stage-canvas-wrapper{
         position: relative;
         width: 100%;
-        /* left: 15%; */
     }
     .stage-canvas-wrapper-teacher{
         position: relative;
@@ -226,7 +225,6 @@
         position: fixed;
         bottom: 0;
         width: 100vw;
-        /* height: 24.2rem; */
         background-color: rgb(255, 255, 255);
         z-index: 999;
         visibility: visible;

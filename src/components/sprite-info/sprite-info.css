@@ -83,6 +83,18 @@
     
 }
 
+@media (max-width: 1080px) {
+    .sprite-info{
+        padding: 0.75rem 0.0rem 0.75rem 0.25rem;
+    }
+    .sprite-inputres {
+        width: 4rem;
+    }
+    .larger-input input {
+        width: 4rem;
+    }
+  }
+
 @media (max-width: 1024px) {
     .sprite-inputres {
         width: 8rem;

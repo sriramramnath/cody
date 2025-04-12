@@ -64,8 +64,9 @@
 }
 
 .renderer {
-    height: 100%;
-    width: 100%;
+    background-color: #801d80;
+    width: 10rem;
+    height: 10rem;
 }
 .with-color-picker {
     cursor: none;

@@ -205,7 +205,7 @@ class SpriteInfo extends React.Component {
                 onSubmit={this.props.onChangeSize}
               />
             </Label>
-            <div onClick={() => this.props.onChangeSize(100)}><Reload /></div>
+            {/* <div onClick={() => this.props.onChangeSize(100)}><Reload /></div> */}
           </div>
           <div className={classNames(styles.group, styles.largerInput)}>
             <DirectionPicker

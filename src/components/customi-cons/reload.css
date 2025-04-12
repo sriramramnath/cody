@@ -1,20 +1,30 @@
 @import "../../css/colors.css";
 
 .reload-container {
-  width: 34px;
-  height: 34px;
-  padding: 0.5rem;
+  width: 24px;
+  height: 24px;
+  padding: 0.35rem;
+  margin-left: 10px;
   user-select: none;
   user-drag: none;
   cursor: pointer;
-  border:1px solid #dedede;
   border-radius: 4px;
   display: flex;
   justify-content: center;
   align-items: center;
   }
+
+  .reload-container:hover {
+    background-color: #f7eef7;
+  }
   .reload-container svg {
     stroke: #801d80 !important;
+  }
+
+  @media (max-width: 1080px) {
+    .reload-container {
+      margin-left: 1px;
+      }
   }
   
 
