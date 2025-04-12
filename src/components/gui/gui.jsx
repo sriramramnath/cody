@@ -43,7 +43,6 @@ import DebugModal from '../debug-modal/debug-modal.jsx';
 import { useEffect } from 'react';
 import { WebContainer } from '@webcontainer/api';
 
-import { buildScratchBlocks } from '../../lib/astParse.js';
 
 import React, { useState } from 'react';
 import AceEditor from 'react-ace';
