@@ -112,9 +112,26 @@ const baseConfig = new ScratchWebpackConfigBuilder({
         ],
     })
     .addModuleRule({
-        test: /\.(svg|png|wav|mp3|gif|jpg)$/,
+        test: /\.(svg|png|wav|gif|jpg)$/,
         resourceQuery: /^$/, // reject any query string
         type: "asset", // let webpack decide on the best type of asset
+    })
+    .addModuleRule({
+        test: /\.mp3$/,
+        resourceQuery: /^$/, // Regular MP3 files without query
+        type: "asset/resource",
+        generator: {
+            filename: "static/assets/[name].[hash][ext][query]",
+        },
+    })
+    .addModuleRule({
+        test: /\.mp3$/,
+        resourceQuery: /arrayBuffer/, // MP3 files with ?arrayBuffer
+        use: [
+            {
+                loader: "arraybuffer-loader",
+            },
+        ],
     })
     .addModuleRule({
         test: /\.hex$/,
