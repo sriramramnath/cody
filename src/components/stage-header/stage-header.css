@@ -114,6 +114,9 @@
     top: 2.7rem;
     left: 20rem;
 }
+.stage-header-wrapper-student-challenge {
+    position:relative;
+}
 .stage-controls-display{
     display: none;
 }

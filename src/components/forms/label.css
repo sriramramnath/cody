@@ -5,6 +5,7 @@
     display: inline-flex;
     flex-direction: row;
     align-items: center;
+
 }
 
 .input-group-column {
@@ -15,7 +16,6 @@
 
 .input-group-column span {
     margin-bottom: .25rem;
-    
 
 }
 
@@ -23,7 +23,6 @@
     font-size: 0.625rem;
     user-select: none;
     cursor: default;
-
     white-space: nowrap;
 }
 
@@ -49,7 +48,8 @@
         margin-left: 0.5rem;
     }
     [dir="ltr"] .input-label, [dir="ltr"] .input-label-secondary {
-        margin-right: 0rem;
+        margin-right: 0.2rem;
+        width: auto;
     }
     
     [dir="rtl"] .input-label, [dir="rtl"] .input-label-secondary {

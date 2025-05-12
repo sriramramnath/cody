@@ -96,10 +96,14 @@
   }
 
 @media (max-width: 1024px) {
+    /* .sprite-info {
+        width: 20.3rem;
+        overflow: auto;
+    } */
     .sprite-inputres {
-        width: 8rem;
+        width: 3rem;
     }
     .larger-input input {
-        width: 8rem;
+        width: 3rem;
     }
   }

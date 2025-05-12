@@ -121,30 +121,13 @@ const StageHeaderComponent = function (props) {
       </div>
     )
     header = (
-      <Box className={currentLayout==="teacher" || currentLayout==="student" ? styles.stageHeaderWrapperLayout :styles.stageHeaderWrapper}>
-        <Box className={styles.stageMenuWrapper}>
-          <Controls vm={vm} currentLayout={currentLayout}/>
-          <div className={currentLayout==="teacher" || currentLayout==="student" ? styles.stageSizeRowStudent :styles.stageSizeRow} >
-            <div className={styles.stageControlsDisplay}>{stageControls}</div>
-            <div className={styles.stageControlsDisplayRes}>
-              {spriteClicked ? stageControls : ''}
-            </div>
-
-           <div className={styles.flagControlsDisplay}>
-              <div>
-                <Button className={styles.stageButton} onClick={onSetStageFull}>
-                  <img
-                    alt={props.intl.formatMessage(messages.fullStageSizeMessage)}
-                    className={styles.stageButtonIcon}
-                    draggable={false}
-                    src={fullScreenIcon}
-                    title={props.intl.formatMessage(messages.fullscreenControl)}
-                  />
-                </Button>
-              </div>
-            </div>
-            <div className={styles.flagControlsDisplayRes}>
-              {flagClicked ? (
+      <>
+        {currentLayout !== "teacher" && currentLayout !== "student" ? (
+          <Box className={styles.stageHeaderWrapperStudentChallenge}>
+            <Box className={styles.stageMenuWrapper}>
+              <Controls vm={vm} />
+              <div className={styles.stageSizeRow}>
+                {stageControls}
                 <div>
                   <Button className={styles.stageButton} onClick={onSetStageFull}>
                     <img
@@ -156,15 +139,66 @@ const StageHeaderComponent = function (props) {
                     />
                   </Button>
                 </div>
-              ) : (
-                ''
-              )}
-            </div>
-          </div>
-        </Box>
-      </Box>
-    )
-  }
+              </div>
+            </Box>
+          </Box>
+        ) : (
+          <Box
+            className={
+              currentLayout === "teacher" || currentLayout === "student"
+                ? styles.stageHeaderWrapperLayout
+                : styles.stageHeaderWrapper
+            }
+          >
+            <Box className={styles.stageMenuWrapper}>
+              <Controls vm={vm} currentLayout={currentLayout} />
+              <div
+                className={
+                  currentLayout === "teacher" || currentLayout === "student"
+                    ? styles.stageSizeRowStudent
+                    : styles.stageSizeRow
+                }
+              >
+                <div PauseclassName={styles.stageControlsDisplay}>{stageControls}</div>
+                <div className={styles.stageControlsDisplayRes}>
+                  {spriteClicked ? stageControls : null}
+                </div>
+    
+                <div className={styles.flagControlsDisplay}>
+                  <div>
+                    <Button className={styles.stageButton} onClick={onSetStageFull}>
+                      <img
+                        alt={props.intl.formatMessage(messages.fullStageSizeMessage)}
+                        className={styles.stageButtonIcon}
+                        draggable={false}
+                        src={fullScreenIcon}
+                        title={props.intl.formatMessage(messages.fullscreenControl)}
+                      />
+                    </Button>
+                  </div>
+                </div>
+                <div className={styles.flagControlsDisplayRes}>
+                  {flagClicked ? (
+                    <div>
+                      <Button className={styles.stageButton} onClick={onSetStageFull}>
+                        <img
+                          alt={props.intl.formatMessage(messages.fullStageSizeMessage)}
+                          className={styles.stageButtonIcon}
+                          draggable={false}
+                          src={fullScreenIcon}
+                          title={props.intl.formatMessage(messages.fullscreenControl)}
+                        />
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </Box>
+          </Box>
+        )}
+      </>
+    );
+  } 
 
   return header
 }

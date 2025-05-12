@@ -50,7 +50,7 @@ const Controls = function (props) {
   return (
     <div className={classNames(currentLayout==='student'&&styles.controlsContainerStudent|| currentLayout==='teacher' && styles.controlsContainerTeacher || (currentLayout!=='student' &&currentLayout!=='student') && styles.controlsContainer, className)} {...componentProps}>
       
-      {!isFullScreen && (
+      {!isFullScreen  && (currentLayout==='student'|| currentLayout==='teacher') && (
         <div
           className={
             currentLayout === 'student' ? (spriteClicked?styles.spriteIconBgStudent:styles.spriteIconBgStudentHide) :
@@ -66,7 +66,7 @@ const Controls = function (props) {
         </div>
       )}
 
-     {currentLayout!=='teacher' && 
+     {currentLayout!=='teacher' && currentLayout==='student' &&
         <div 
           onClick={handleGreenbuttonClick}
           className={
@@ -79,7 +79,7 @@ const Controls = function (props) {
         </div>
       }
 
-     {currentLayout != 'normal' && <div onClick={handleReload} className={styles.reloadButton} data-tooltip="Reload" ><Reload /></div>}
+     {/* {currentLayout != 'normal' && <div onClick={handleReload} className={styles.reloadButton} data-tooltip="Reload" ><Reload /></div>} */}
      
       <div ref={greenFlagRef} className={styles.redGreenButtons}>
         <div data-tooltip="Green Flag" className={styles.redGreenButtonsSub} >

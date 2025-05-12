@@ -450,7 +450,7 @@ $fade-out-distance: 15px;
     color: #787878;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 720px) {
   .flex-wrapper {
     flex-direction: column;
     

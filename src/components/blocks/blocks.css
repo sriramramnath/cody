@@ -102,10 +102,5 @@
     min-height: auto;
 }
 
-@media (max-width: 1024px) {
-    .blocks :global(.injectionDiv){
-        width: 100vw !important;
-    }
-  }
- 
+
 
