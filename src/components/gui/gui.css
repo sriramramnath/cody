@@ -3,7 +3,7 @@
 @import "../../css/z-index.css";
 
 html, body {
-    overflow-x: hidden;
+    overflow-x: scroll;
 }
 
 .menu-bar-menu {
