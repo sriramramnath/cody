@@ -48,7 +48,7 @@ import sharedMessages from '../../lib/shared-messages'
 import SB3Downloader from '../../containers/sb3-downloader.jsx'
 
 import MenuBarGuiSub from '../menu-bar/menu-bar-gui-sub.jsx'
-import { usePenpalParent } from '@weblivion/react-penpal';
+import { connect as penpalConnect, WindowMessenger } from 'penpal';
 
 const messages = defineMessages({
   addExtension: {
@@ -155,21 +155,52 @@ const GUIComponent = (props) => {
     isRendererSupported = Renderer.isSupported()
   }
   const [currentLayout, setCurrentLayout] = React.useState('normal')
+  const [remote, setRemote] = React.useState(null);
+  const [connection, setConnection] = React.useState(null);
   const [message, setMessage] = React.useState('');
   const [value, setValue] = React.useState(0);
-  const { parentMethods, connection } = usePenpalParent({
-    methods: {
-      getScratchState(message) {
-        setMessage(message);
-      },
-    },
-  });
+  
+  useEffect(() => {
+    const connectToParent = async () => {
+      try {
+        const messenger = new WindowMessenger({
+          remoteWindow: window.parent,
+          allowedOrigins: [window.location.origin],
+        });
+
+        const conn = penpalConnect({
+          messenger,
+          methods: {
+            getScratchState(message) {
+              return message; // Respond to parent with the message
+            },
+          },
+          timeout: 5000,
+        });
+
+        const remoteApi = await conn.promise;
+        setRemote(remoteApi);
+        setConnection(conn);
+      } catch (error) {
+        console.error('Penpal connection failed:', error);
+      }
+    };
+
+    connectToParent();
+
+    return () => {
+      if (connection) {
+        console.log('Destroying Penpal connection');
+        connection.destroy();
+      }
+    };
+  }, []);
 
   useEffect(() => {
-    if (connection) {
-      parentMethods.updateStateFromScratch(isScratchData);
+    if (remote) {
+      remote.updateStateFromScratch?.(isScratchData);
     }
-  }, [connection, parentMethods, isScratchData]);
+  }, [remote, isScratchData]);
 
   useEffect(() => {
     localforage.getItem('currentLayout').then(value => {
