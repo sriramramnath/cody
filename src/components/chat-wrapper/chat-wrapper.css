@@ -1,0 +1,341 @@
+@import "../../css/units.css";
+@import "../../css/colors.css";
+
+/* 确保聊天区域与 stageAndTargetWrapper 并排显示 */
+.chatWrapper {
+    /* 已经在类中设置了order，此处不需要额外的chatAreaPosition类 */
+    order: 3;  /* 第三个位置，在 editorWrapper 和 stageAndTargetWrapper 之后 */
+}
+
+.chatWrapper {
+    display: flex;
+    flex-direction: column;
+    /* 已移除背景色 */
+    width: auto; /* 移除固定宽度，由JS动态控制 */
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+    transition: width 0.2s ease;
+    padding-right: 0.5rem; /* 展开时添加右侧内边距 */
+    padding-bottom: 0.5rem; /* 展开时添加底部内边距 */
+}
+
+.chatContent {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.chatHeader {
+    display: flex;
+    align-items: center;
+    height: 2.75rem; /* 与stage-header高度一致 $stage-menu-height */
+    padding: 0 0.6rem; /* 使用水平内边距，垂直方向由高度控制 */
+    background: linear-gradient(to bottom, 
+        hsla(215, 100%, 95%, 1), /* $ui-primary */
+        hsla(215, 75%, 95%, 1)   /* $ui-secondary */
+    );
+}
+
+.chatIcon {
+    margin-right: 0.5rem;
+    flex-shrink: 0;
+    fill: hsla(215, 100%, 65%, 1); /* $motion-primary */
+}
+
+.chatTitle {
+    color: hsla(225, 15%, 40%, 1); /* $text-primary */
+    font-weight: 500;
+    font-size: 1rem;
+    margin: 0;
+}
+
+.toggleButton {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 80px;
+    background-color: hsla(215, 100%, 65%, 1); /* $motion-primary */
+    border: none;
+    border-radius: 0 6px 6px 0;
+    cursor: pointer;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    outline: none;
+    box-shadow: 0 0 5px hsla(0, 0%, 0%, 0.15);
+    transition: all 0.2s ease;
+}
+
+.toggleButton:hover {
+    background-color: hsla(215, 60%, 50%, 1); /* $motion-tertiary */
+    width: 24px;
+}
+
+.toggleButtonIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+.toggleButtonIcon svg {
+    transition: transform 0.2s ease;
+}
+
+.toggleButtonIcon:hover svg {
+    transform: scale(1.2);
+}
+
+.collapsed {
+    width: 40px !important; /* 使用!important确保覆盖内联样式 */
+    min-width: 40px;
+    overflow: hidden;
+    position: relative;
+    padding-right: 0; /* 覆盖展开状态的右侧内边距 */
+    padding-bottom: 0; /* 覆盖展开状态的底部内边距 */
+    transition: width 0.3s ease; /* 添加过渡效果 */
+    border-radius: 0 0.5rem 0.5rem 0; /* 与其他组件保持一致的圆角 */
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.collapsed:hover {
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+}
+
+.chatContainer {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    padding: 0.5rem; /* $space */
+    overflow: hidden;
+}
+
+.chatMessages {
+    flex-grow: 1;
+    overflow-y: auto;
+    margin-bottom: 0.5rem; /* $space */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 15px;
+    scrollbar-width: thin;
+    scrollbar-color: hsla(215, 100%, 65%, 0.5) transparent;
+    scroll-behavior: smooth; /* 平滑滚动 */
+    margin-top: auto; /* 让消息内容靠底部显示 */
+    background-color: hsla(0, 100%, 100%, 1); /* $ui-white */
+}
+
+.chatMessages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chatMessages::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 4px 0;
+}
+
+.chatMessages::-webkit-scrollbar-thumb {
+    background-color: hsla(215, 100%, 65%, 0.5);
+    border-radius: 3px;
+    border: 1px solid transparent;
+}
+
+.chatMessages::-webkit-scrollbar-thumb:hover {
+    background-color: hsla(215, 100%, 65%, 0.7);
+}
+
+/* 输入框滚动条样式 */
+.chatInputField::-webkit-scrollbar {
+    width: 4px;
+}
+
+.chatInputField::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.chatInputField::-webkit-scrollbar-thumb {
+    background-color: hsla(215, 100%, 65%, 0.5);
+    border-radius: 2px;
+}
+
+.chatInputField::-webkit-scrollbar-thumb:hover {
+    background-color: hsla(215, 100%, 65%, 0.7);
+}
+
+.messageBot, .messageUser {
+    display: flex;
+    max-width: 80%;
+}
+
+.messageBot {
+    align-self: flex-start;
+}
+
+.messageUser {
+    align-self: flex-end;
+}
+
+.messageContent {
+    padding: 8px 12px;
+    border-radius: 16px;
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+.messageBot .messageContent {
+    background-color: hsla(215, 100%, 65%, 0.15); /* 15% transparent version of motion-primary */
+    color: hsla(225, 15%, 40%, 1); /* $text-primary */
+    border-top-left-radius: 4px;
+}
+
+.messageUser .messageContent {
+    background-color: hsla(215, 100%, 65%, 1); /* $motion-primary */
+    color: white;
+    border-top-right-radius: 4px;
+}
+
+.chatInput {
+    display: flex;
+    align-items: center; /* 确保子元素垂直居中 */
+    background-color: hsla(215, 50%, 97%, 1); /* 浅灰蓝背景 */
+    border-radius: 20px;
+    padding: 6px;
+    box-shadow: 0 2px 5px hsla(0, 0%, 0%, 0.05);
+    border: 1px solid hsla(0, 0%, 0%, 0.05);
+    transition: all 0.2s ease;
+    width: calc(100% - 20px); /* 左右各留10px边距 */
+    margin: 0 auto;
+}
+
+.chatInput:focus-within {
+    box-shadow: 0 3px 8px hsla(0, 0%, 0%, 0.15);
+    border-color: hsla(215, 100%, 65%, 0.5); /* 聚焦时添加动画边框 */
+}
+
+.chatInputField {
+    flex-grow: 1;
+    border: none;
+    padding: 8px 10px;
+    font-size: 0.875rem;
+    background: transparent;
+    outline: none;
+    color: hsla(225, 15%, 40%, 1); /* $text-primary */
+    resize: none;
+    min-height: 20px;
+    max-height: 120px;
+    overflow-y: auto;
+    line-height: 1.4;
+    word-wrap: break-word;
+    transition: height 0.1s ease;
+    margin: 0; /* 确保没有外边距影响对齐 */
+    vertical-align: middle; /* 确保文本垂直居中 */
+}
+
+.sendButton {
+    background-color: hsla(215, 100%, 65%, 1); /* $motion-primary */
+    color: white;
+    border: none;
+    border-radius: 100%;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    padding: 0;
+    margin-left: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 0 2px hsla(215, 100%, 65%, 0.25);
+    align-self: center; /* 确保按钮在父容器中垂直居中 */
+    flex-shrink: 0; /* 防止按钮被压缩 */
+}
+
+.sendButton:hover {
+    background-color: hsla(215, 60%, 50%, 1); /* $motion-tertiary */
+    transform: scale(1.1);
+    box-shadow: 0 0 0 4px hsla(215, 100%, 65%, 0.3);
+}
+
+.sendIcon {
+    width: 16px;
+    height: 16px;
+}
+
+.collapsedLabel {
+    position: absolute;
+    top: 50%;
+    left: 40px;
+    transform: rotate(90deg) translateX(-50%);
+    transform-origin: 0 0;
+    white-space: nowrap;
+    color: hsla(225, 15%, 40%, 1); /* $text-primary */
+    font-weight: bold;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    display: none; /* 我们将使用更好的方式来显示折叠状态 */
+}
+
+.collapsedContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    height: 100%;
+    padding-top: 20px;
+}
+
+.collapsedContent .chatIcon {
+    margin-right: 0;
+    width: 28px;
+    height: 28px;
+}
+
+.verticalText {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+    color: hsla(225, 15%, 40%, 1); /* $text-primary */
+    font-weight: bold;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    margin-top: 16px;
+    text-transform: uppercase;
+}
+
+.chatCanvasWrapper {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end; /* 内容从底部开始显示 */
+    background-color: hsla(0, 100%, 100%, 1); /* $ui-white */
+    border-radius: 0.5rem;
+    border: 0.0625rem solid hsla(0, 0%, 0%, 0.15);
+    box-shadow: inset 0 0 8px hsla(0, 0%, 0%, 0.05);
+    margin: 0 0 0.5rem 0; /* 底部增加一点间距 */
+}
+
+.chatInputWrapper {
+    padding: 0.5rem 0;
+    display: flex;
+    justify-content: center;
+    position: relative;
+    background-color: hsla(0, 100%, 100%, 1); /* $ui-white */
+    border: 0.0625rem solid hsla(0, 0%, 0%, 0.15);
+    border-radius: 0.5rem;
+    margin: 0;
+}
+
+/* 已移除宽度调整相关样式 */

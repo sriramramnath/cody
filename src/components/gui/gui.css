@@ -19,9 +19,10 @@
     display: flex;
 
     /*
-        Make 2 columns:
-        a) for the blocks + workspace panes, and
-        b) for combined stage menu + stage + sprite/stage selectors
+        Make 3 columns:
+        a) for the blocks + workspace panes,
+        b) for combined stage menu + stage + sprite/stage selectors, and
+        c) for chat area
     */
     flex-direction: row;
     height: 100%;
@@ -210,6 +211,55 @@
 
     /* this will only ever be as wide as the stage */
     flex-basis: 0;
+}
+
+
+
+.newAreaTitle {
+    color: $text-primary;
+    font-weight: 500;
+    font-size: 1rem;
+    margin: 0.75rem 0;
+    text-align: center;
+    border-bottom: 1px solid $ui-black-transparent;
+    padding-bottom: 0.75rem;
+}
+
+.infoPanelSection {
+    margin-bottom: 1.5rem;
+}
+
+.infoPanelSection h3 {
+    color: $motion-primary;
+    font-weight: 500;
+    font-size: 0.85rem;
+    margin: 0.5rem 0;
+}
+
+.infoItem {
+    display: flex;
+    justify-content: space-between;
+    margin: 0.5rem 0;
+    font-size: 0.8rem;
+}
+
+.infoLabel {
+    color: $text-primary;
+    margin-right: 0.5rem;
+}
+
+.helpText {
+    font-size: 0.8rem;
+    color: $text-primary;
+    line-height: 1.5;
+}
+
+.new-area-content h2 {
+    color: $text-primary;
+    font-weight: 500;
+    font-size: 0.85rem;
+    margin: 0.75rem 0;
+    text-align: center;
 }
 
 .target-wrapper {

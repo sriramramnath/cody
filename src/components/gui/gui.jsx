@@ -21,6 +21,7 @@ import MenuBar from '../menu-bar/menu-bar.jsx';
 import CostumeLibrary from '../../containers/costume-library.jsx';
 import BackdropLibrary from '../../containers/backdrop-library.jsx';
 import Watermark from '../../containers/watermark.jsx';
+import ChatWrapper from '../../containers/chat-wrapper.jsx';
 
 import Backpack from '../../containers/backpack.jsx';
 import WebGlModal from '../../containers/webgl-modal.jsx';
@@ -370,6 +371,9 @@ const GUIComponent = props => {
                                 />
                             </Box>
                         </Box>
+
+                        {/* 聊天区域组件 - 放在最右侧 */}
+                        <ChatWrapper vm={vm} />
                     </Box>
                 </Box>
                 <DragLayer />
