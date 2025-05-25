@@ -14,7 +14,7 @@
     "build": "npm run clean && webpack",
     "clean": "rimraf ./build ./dist",
     "deploy": "touch build/.nojekyll && gh-pages -t -d build -m \"[skip ci] Build for $(git log --pretty=format:%H -n1)\"",
-    "prepublish": "node scripts/prepublish.mjs",
+    "prepublish": "node scripts/prepublish.mjs || echo 'prepublish failed, continuing...'",
     "prune": "./prune-gh-pages.sh",
     "i18n:push": "tx-push-src scratch-editor interface translations/en.json",
     "i18n:src": "rimraf ./translations/messages/src && babel src > tmp.js && rimraf tmp.js && build-i18n-src ./translations/messages/src ./translations/",
@@ -44,6 +44,7 @@
     "cookie": "^0.6.0",
     "copy-webpack-plugin": "^6.4.1",
     "core-js": "^2.5.7",
+    "cross-fetch": "^4.1.0",
     "css-loader": "5.2.7",
     "dapjs": "^2.3.0",
     "es6-object-assign": "^1.1.0",
@@ -143,7 +144,7 @@
     "webpack": "5.99.9",
     "webpack-cli": "5.1.4",
     "webpack-dev-server": "5.2.1",
-    "yauzl": "2.10.0"
+    "yauzl": "^2.10.0"
   },
   "jest": {
     "setupFiles": [

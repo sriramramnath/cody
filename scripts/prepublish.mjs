@@ -77,10 +77,9 @@ const extractFirstMatchingFile = (filter, relativeDestDir, zipBuffer) => new Pro
 });
 
 const downloadMicrobitHex = async () => {
-    const url = 'https://downloads.scratch.mit.edu/microbit/scratch-microbit.hex.zip';
-    console.info(`Downloading ${url}`);
-    const response = await crossFetch(url);
-    const zipBuffer = Buffer.from(await response.arrayBuffer());
+    const localZipPath = path.join(basePath, 'scratch-microbit-1.2.0.hex.zip');
+    console.info(`Reading local file: ${localZipPath}`);
+    const zipBuffer = fs.readFileSync(localZipPath);
     const relativeHexDir = path.join('static', 'microbit');
     const hexFileName = await extractFirstMatchingFile(
         entry => /\.hex$/.test(entry.fileName),
