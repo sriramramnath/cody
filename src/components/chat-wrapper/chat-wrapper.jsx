@@ -1,8 +1,9 @@
 import PropTypes from 'prop-types';
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {FormattedMessage} from 'react-intl';
 import Box from '../box/box.jsx';
 import layout from '../../lib/layout-constants';
+import deepseekAPI from '../../lib/deepseek-api';
 
 import styles from './chat-wrapper.css';
 
@@ -45,7 +46,15 @@ const ChatWrapperComponent = props => {
     const [collapsed, setCollapsed] = useState(false);
     const [width, setWidth] = useState(layout.standardStageWidth); // 使用标准舞台宽度作为默认宽度
     const [lastWidth, setLastWidth] = useState(layout.standardStageWidth); // 记住上一次展开时的宽度
+    const [messages, setMessages] = useState(() => {
+        // 使用初始化函数创建消息历史，但过滤掉系统消息（不显示给用户）
+        return deepseekAPI.initializeChat().filter(msg => msg.role !== 'system');
+    });
+    const [inputValue, setInputValue] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const chatRef = React.useRef(null);
+    const messagesEndRef = useRef(null);
+    const textareaRef = useRef(null);
     
     // 窗口大小改变时，根据屏幕宽度调整聊天区域宽度
     useEffect(() => {
@@ -85,6 +94,102 @@ const ChatWrapperComponent = props => {
         };
     }, [collapsed]);
     
+    // 每当消息列表变化时，滚动到最新消息
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
+    
+    // 滚动到最新消息
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+    
+    // 处理用户输入变化
+    const handleInputChange = (e) => {
+        setInputValue(e.target.value);
+        
+        // 自动调整高度
+        e.target.style.height = 'auto';
+        e.target.style.height = `${Math.min(120, e.target.scrollHeight)}px`;
+    };
+    
+    // 处理按键事件 (按下回车键发送消息)
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSendMessage();
+        }
+    };
+    
+    // 处理发送消息
+    const handleSendMessage = async () => {
+        if (inputValue.trim() === '' || isLoading) return;
+        
+        const userMessage = {
+            role: 'user',
+            content: inputValue
+        };
+        
+        // 更新消息列表，添加用户消息
+        setMessages(prev => [...prev, userMessage]);
+        setInputValue('');
+        setIsLoading(true);
+        
+        // 重置输入框高度
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+        }
+        
+        try {
+            // 获取完整的消息历史，并添加系统提示
+            const systemPrompt = deepseekAPI.initializeChat()[0]; // 获取系统提示
+            const visibleMessages = [...messages, userMessage]; // 当前显示的消息
+            
+            // 将系统提示放在消息历史的开头
+            const messageHistory = [systemPrompt, ...visibleMessages];
+            
+            // 调用 DeepSeek API
+            const response = await deepseekAPI.sendMessage(messageHistory);
+            
+            // 获取回复并更新消息列表
+            if (response.choices && response.choices.length > 0) {
+                const assistantMessage = {
+                    role: 'assistant',
+                    content: response.choices[0].message.content
+                };
+                
+                setMessages(prev => [...prev, assistantMessage]);
+            }
+        } catch (error) {
+            console.error('发送消息失败:', error);
+            // 添加用户友好的错误消息
+            setMessages(prev => [...prev, {
+                role: 'assistant',
+                content: `抱歉，我遇到了一点问题：${error.message}。请稍后再试，或者刷新页面重新开始。`
+            }]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    // 复制消息内容
+    const handleCopyMessage = (content) => {
+        navigator.clipboard.writeText(content)
+            .then(() => {
+                // 可以添加一个临时提示表示复制成功，但为了简洁，这里省略了
+                console.log('消息已复制到剪贴板');
+            })
+            .catch(err => {
+                console.error('复制失败:', err);
+            });
+    };
+    
+    // 清空聊天记录
+    const handleClearChat = () => {
+        // 重新初始化消息，但保留系统消息，仅显示初始问候
+        setMessages(deepseekAPI.initializeChat().filter(msg => msg.role !== 'system'));
+    };
+    
     // 处理折叠/展开状态
     const toggleCollapse = () => {
         if (collapsed) {
@@ -96,8 +201,6 @@ const ChatWrapperComponent = props => {
         }
         setCollapsed(!collapsed);
     };
-    
-    // 删除了拖动调整宽度的功能
     
     return (
         <Box 
@@ -137,25 +240,54 @@ const ChatWrapperComponent = props => {
                                     id="gui.chatWrapper.chatScratch"
                                 />
                             </h1>
+                            <button 
+                                className={styles.clearChatButton}
+                                onClick={handleClearChat}
+                                title="清空聊天记录"
+                                aria-label="清空聊天记录"
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                                </svg>
+                            </button>
                         </div>
                     </Box>
                     <Box className={styles.chatCanvasWrapper}>
                         <div className={styles.chatMessages}>
-                            <div className={styles.messageBot}>
-                                <div className={styles.messageContent}>
-                                    你好！我是 Scratch 助手，有什么可以帮助你的吗？
+                            {messages.map((message, index) => (
+                                <div 
+                                    key={index} 
+                                    className={message.role === 'assistant' ? styles.messageBot : styles.messageUser}
+                                >
+                                    <div className={styles.messageContent}>
+                                        {message.content}
+                                        {message.content.length > 10 && message.role === 'assistant' && (
+                                            <button 
+                                                className={styles.copyButton}
+                                                onClick={() => handleCopyMessage(message.content)}
+                                                title="复制消息"
+                                                aria-label="复制消息"
+                                            >
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                                    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+                                                </svg>
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                            <div className={styles.messageUser}>
-                                <div className={styles.messageContent}>
-                                    我想创建一个游戏！
+                            ))}
+                            {isLoading && (
+                                <div className={styles.messageBot}>
+                                    <div className={styles.messageContent}>
+                                        思考中<span className={styles.loadingDots}>
+                                            <span>.</span>
+                                            <span>.</span>
+                                            <span>.</span>
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className={styles.messageBot}>
-                                <div className={styles.messageContent}>
-                                    太棒了！你可以使用 Scratch 轻松创建游戏。先从添加角色开始，然后编写移动和互动的代码块。需要我帮你开始吗？
-                                </div>
-                            </div>
+                            )}
+                            <div ref={messagesEndRef} />
                         </div>
                     </Box>
                     <Box className={styles.chatInputWrapper}>
@@ -164,18 +296,18 @@ const ChatWrapperComponent = props => {
                                 placeholder="输入消息..." 
                                 className={styles.chatInputField}
                                 rows="1"
-                                onChange={e => {
-                                    // 自动调整高度
-                                    e.target.style.height = 'auto';
-                                    e.target.style.height = `${Math.min(120, e.target.scrollHeight)}px`;
-                                    // 触发父容器重新布局以确保发送按钮居中
-                                    e.target.parentElement.style.alignItems = 'center';
-                                }}
+                                value={inputValue}
+                                onChange={handleInputChange}
+                                onKeyPress={handleKeyPress}
+                                ref={textareaRef}
+                                disabled={isLoading}
                             />
                             <button 
                                 className={styles.sendButton} 
                                 title="发送消息"
                                 aria-label="发送消息"
+                                onClick={handleSendMessage}
+                                disabled={inputValue.trim() === '' || isLoading}
                             >
                                 <svg 
                                     className={styles.sendIcon} 
