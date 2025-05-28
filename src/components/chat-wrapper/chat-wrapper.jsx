@@ -101,6 +101,66 @@ const SettingsIcon = () => (
     </svg>
 );
 
+// 添加会话图标组件
+const SessionsIcon = () => (
+    <svg 
+        width="16" 
+        height="16" 
+        viewBox="0 0 24 24" 
+        fill="currentColor"
+    >
+        <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17l-.59.59-.58.58V4h16v12zM6 12h2v2H6zm0-3h2v2H6zm0-3h2v2H6zm4 6h5v2h-5zm0-3h8v2h-8zm0-3h8v2h-8z" />
+    </svg>
+);
+
+// 添加新建会话图标组件
+const AddSessionIcon = () => (
+    <svg 
+        width="16" 
+        height="16" 
+        viewBox="0 0 24 24" 
+        fill="currentColor"
+    >
+        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+    </svg>
+);
+
+// 编辑图标
+const EditIcon = () => (
+    <svg 
+        width="14" 
+        height="14" 
+        viewBox="0 0 24 24" 
+        fill="currentColor"
+    >
+        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+    </svg>
+);
+
+// 删除图标
+const DeleteIcon = () => (
+    <svg 
+        width="14" 
+        height="14" 
+        viewBox="0 0 24 24" 
+        fill="currentColor"
+    >
+        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+    </svg>
+);
+
+// 关闭图标
+const CloseIcon = () => (
+    <svg 
+        width="16" 
+        height="16" 
+        viewBox="0 0 24 24" 
+        fill="currentColor"
+    >
+        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+    </svg>
+);
+
 const ChatIcon = () => (
     <svg 
         className={styles.chatIcon} 
@@ -202,6 +262,13 @@ const ChatWrapperComponent = props => {
     const [historyIndex, setHistoryIndex] = useState(-1);
     const [temporaryInput, setTemporaryInput] = useState(''); // 存储用户当前编辑但未提交的内容
     
+    // 会话相关状态
+    const [sessions, setSessions] = useState([]);  // 所有会话列表
+    const [currentSessionId, setCurrentSessionId] = useState(null);  // 当前会话ID
+    const [showSessionsDrawer, setShowSessionsDrawer] = useState(false);  // 控制会话抽屉显示
+    const [editingSessionId, setEditingSessionId] = useState(null);  // 正在编辑标题的会话ID
+    const [editingSessionTitle, setEditingSessionTitle] = useState('');  // 编辑中的标题
+    
     // 设置相关状态
     const [apiKey, setApiKey] = useState('');
     const [apiUrl, setApiUrl] = useState('https://api.deepseek.com/v1/chat/completions');
@@ -214,11 +281,111 @@ const ChatWrapperComponent = props => {
     
     // 清空历史记录相关状态
     const [clearHistoryResult, setClearHistoryResult] = useState(null);
+    const [clearSessionsResult, setClearSessionsResult] = useState(null);
     
     const chatRef = React.useRef(null);
     const messagesEndRef = useRef(null);
     const textareaRef = useRef(null);
     
+    // 测试和自动修复IndexedDB功能
+    const testIndexedDB = async () => {
+        console.log('===== 开始诊断IndexedDB =====');
+        
+        let needsRepair = false;
+        
+        // 1. 检查数据库版本
+        try {
+            const DB_NAME = 'scratch-chat-db';
+            const request = indexedDB.open(DB_NAME);
+            request.onsuccess = async (event) => {
+                const db = event.target.result;
+                console.log(`当前数据库版本: ${db.version}`);
+                
+                // 列出所有存储
+                const storeNames = Array.from(db.objectStoreNames);
+                console.log('数据库中的对象存储:', storeNames);
+                
+                // 检查是否缺少必要的存储
+                const requiredStores = ['chatSessions', 'chatMessages'];
+                const missingStores = requiredStores.filter(store => !storeNames.includes(store));
+                
+                if (missingStores.length > 0) {
+                    console.warn('检测到缺失的存储:', missingStores);
+                    needsRepair = true;
+                    
+                    // 自动修复：调用重置数据库函数
+                    console.log('开始自动修复数据库...');
+                    db.close();
+                    const resetSuccess = await indexedDBHelper.resetDatabase();
+                    console.log('数据库重置结果:', resetSuccess);
+                    
+                    if (resetSuccess) {
+                        // 刷新页面以重新初始化所有内容
+                        alert('数据库结构已修复，页面将重新加载以应用更改。');
+                        window.location.reload();
+                        return;
+                    } else {
+                        console.error('自动修复失败，尝试其他方法');
+                    }
+                } else {
+                    console.log('数据库结构正确，所有必要的存储都已存在');
+                }
+                
+                db.close();
+                
+                // 如果不需要修复，继续测试
+                if (!needsRepair) {
+                    await testDatabaseOperations();
+                }
+            };
+            request.onerror = (event) => {
+                console.error('无法打开数据库进行检查:', event.target.error);
+            };
+        } catch (e) {
+            console.error('检查数据库版本失败:', e);
+        }
+        
+        console.log('===== IndexedDB诊断结束 =====');
+    };
+    
+    // 分离数据库操作测试为单独函数
+    const testDatabaseOperations = async () => {
+        try {
+            console.log('测试数据库操作');
+            
+            // 测试创建新会话
+            console.log('测试创建新会话');
+            const sessionId = await indexedDBHelper.createSession('测试会话');
+            console.log('创建的会话ID:', sessionId);
+            
+            // 获取所有会话
+            const sessions = await indexedDBHelper.getSessions();
+            console.log('当前所有会话:', sessions);
+            
+            // 测试保存消息
+            if (sessionId) {
+                const testMessage = {
+                    role: 'user',
+                    content: '这是一条测试消息'
+                };
+                
+                const messageId = await indexedDBHelper.saveMessageToSession(sessionId, testMessage);
+                console.log('保存测试消息ID:', messageId);
+                
+                // 获取会话消息
+                const messages = await indexedDBHelper.getSessionMessages(sessionId);
+                console.log('会话中的消息:', messages);
+                
+                // 清理测试数据
+                await indexedDBHelper.deleteSession(sessionId);
+                console.log('已清理测试会话');
+            }
+        } catch (e) {
+            console.error('测试IndexedDB操作失败:', e);
+            alert('数据库操作出错，请检查控制台日志。可能需要重新加载页面或清除浏览器数据。');
+        }
+    };
+
     // 从存储加载设置和历史记录
     useEffect(() => {
         // 加载模型设置
@@ -260,9 +427,265 @@ const ChatWrapperComponent = props => {
             }
         };
         
-        loadSettings();
-        loadInputHistory();
+        // 加载会话列表
+        const loadSessions = async () => {
+            try {
+                console.log('开始加载会话列表...');
+                const allSessions = await indexedDBHelper.getSessions();
+                console.log('获取到的会话列表:', allSessions);
+                setSessions(allSessions);
+                
+                // 如果有会话，自动加载最近的会话
+                if (allSessions && allSessions.length > 0) {
+                    console.log('找到现有会话，加载最近的会话:', allSessions[0].id);
+                    setCurrentSessionId(allSessions[0].id);
+                    loadSessionMessages(allSessions[0].id);
+                } else {
+                    console.log('没有找到现有会话，准备创建新会话');
+                    // 如果没有会话，创建一个新会话
+                    const newSessionId = await createNewSession();
+                    console.log('创建新会话结果:', newSessionId);
+                }
+            } catch (e) {
+                console.error('加载会话列表失败:', e);
+                // 创建新会话以确保用户可以开始对话
+                console.log('因错误而创建新会话');
+                createNewSession();
+            }
+        };
+        
+        // 添加数据库健康检查
+        const checkDatabaseHealth = async () => {
+            try {
+                console.log('执行数据库健康检查...');
+                // 使用新添加的检查和修复工具
+                const checkResult = await indexedDBHelper.checkAndRepairDatabase();
+                
+                if (!checkResult.success) {
+                    console.warn('数据库结构检查失败:', checkResult.message);
+                    
+                    // 尝试重置数据库
+                    console.log('尝试重置数据库...');
+                    const resetSuccess = await indexedDBHelper.resetDatabase();
+                    
+                    if (resetSuccess) {
+                        console.log('数据库重置成功，刷新页面以应用更改');
+                        alert('数据库已重置，页面将重新加载');
+                        window.location.reload();
+                        return;
+                    } else {
+                        console.error('数据库重置失败');
+                        alert('数据库修复失败，可能需要手动清除浏览器数据');
+                    }
+                } else {
+                    console.log('数据库健康检查通过:', checkResult);
+                }
+            } catch (error) {
+                console.error('数据库健康检查失败:', error);
+            }
+        };
+        
+        // 执行数据库健康检查
+        checkDatabaseHealth().then(() => {
+            // 检查完成后加载数据
+            loadSettings();
+            loadInputHistory();
+            loadSessions();
+        });
+        
+        // 诊断测试（可选，仅在开发环境下运行）
+        if (process.env.NODE_ENV === 'development') {
+            setTimeout(() => {
+                testIndexedDB();
+            }, 2000);
+        }
     }, []);
+    
+    // 加载指定会话的消息
+    const loadSessionMessages = async (sessionId) => {
+        if (!sessionId) {
+            console.error('无法加载会话消息：会话ID为空');
+            return;
+        }
+        
+        try {
+            console.log(`开始加载会话 ${sessionId} 的消息...`);
+            setIsLoading(true);
+            const sessionMessages = await indexedDBHelper.getSessionMessages(sessionId);
+            console.log(`会话 ${sessionId} 中的消息:`, sessionMessages);
+            
+            if (sessionMessages && sessionMessages.length > 0) {
+                // 过滤掉系统消息，不显示给用户
+                const filteredMessages = sessionMessages.filter(msg => msg.role !== 'system');
+                console.log('过滤后的消息:', filteredMessages);
+                setMessages(filteredMessages);
+            } else {
+                console.log('会话中没有消息，初始化空对话');
+                // 如果会话没有消息，则初始化一个空的对话
+                const initialMessages = deepseekAPI.initializeChat().filter(msg => msg.role !== 'system');
+                setMessages(initialMessages);
+                
+                // 保存系统提示到该会话
+                const systemPrompt = deepseekAPI.initializeChat().find(msg => msg.role === 'system');
+                if (systemPrompt) {
+                    console.log('保存系统提示到新会话:', systemPrompt);
+                    try {
+                        await indexedDBHelper.saveMessageToSession(sessionId, systemPrompt);
+                    } catch (err) {
+                        console.error('保存系统提示失败:', err);
+                    }
+                }
+            }
+            setIsLoading(false);
+        } catch (e) {
+            console.error('加载会话消息失败:', e);
+            setIsLoading(false);
+            // 初始化一个空对话
+            setMessages(deepseekAPI.initializeChat().filter(msg => msg.role !== 'system'));
+        }
+    };
+    
+    // 创建新会话
+    const createNewSession = async () => {
+        try {
+            console.log('开始创建新会话...');
+            const sessionId = await indexedDBHelper.createSession('新会话');
+            
+            if (!sessionId) {
+                console.error('创建会话失败：indexedDBHelper.createSession 返回了 null');
+                return null;
+            }
+            
+            console.log('新会话创建成功，ID:', sessionId);
+            
+            // 更新会话列表
+            const allSessions = await indexedDBHelper.getSessions();
+            console.log('获取所有会话列表:', allSessions);
+            setSessions(allSessions);
+            
+            // 检查会话是否真的在列表中
+            const sessionExists = allSessions.some(s => s.id === sessionId);
+            if (!sessionExists) {
+                console.error('警告：新创建的会话不在返回的会话列表中');
+            }
+            
+            // 切换到新会话
+            console.log('设置当前会话ID为:', sessionId);
+            setCurrentSessionId(sessionId);
+            
+            // 清空当前消息
+            const initialMessages = deepseekAPI.initializeChat().filter(msg => msg.role !== 'system');
+            console.log('初始化新会话消息:', initialMessages);
+            setMessages(initialMessages);
+            
+            return sessionId;
+        } catch (e) {
+            console.error('创建新会话失败，捕获到异常:', e);
+            return null;
+        }
+    };
+    
+    // 切换会话
+    const switchSession = async (sessionId) => {
+        if (sessionId === currentSessionId) return;
+        
+        setCurrentSessionId(sessionId);
+        await loadSessionMessages(sessionId);
+        
+        // 如果是在小屏幕上，切换会话后关闭会话抽屉
+        if (window.innerWidth < 768) {
+            setShowSessionsDrawer(false);
+        }
+    };
+    
+    // 删除会话
+    const deleteSessionHandler = async (sessionId) => {
+        // 确认是否要删除
+        const confirmDelete = window.confirm('确定要删除这个会话吗？');
+        if (!confirmDelete) return;
+        
+        try {
+            await indexedDBHelper.deleteSession(sessionId);
+            
+            // 更新会话列表
+            const remainingSessions = await indexedDBHelper.getSessions();
+            setSessions(remainingSessions);
+            
+            // 如果删除的是当前会话，切换到另一个会话或创建新会话
+            if (sessionId === currentSessionId) {
+                if (remainingSessions.length > 0) {
+                    await switchSession(remainingSessions[0].id);
+                } else {
+                    await createNewSession();
+                }
+            }
+        } catch (e) {
+            console.error('删除会话失败:', e);
+        }
+    };
+    
+    // 开始编辑会话标题
+    const startEditing = (sessionId, currentTitle) => {
+        setEditingSessionId(sessionId);
+        setEditingSessionTitle(currentTitle);
+    };
+    
+    // 保存编辑的会话标题
+    const saveSessionTitle = async () => {
+        if (!editingSessionId || editingSessionTitle.trim() === '') return;
+        
+        try {
+            await indexedDBHelper.updateSessionTitle(editingSessionId, editingSessionTitle.trim());
+            
+            // 更新会话列表
+            const updatedSessions = await indexedDBHelper.getSessions();
+            setSessions(updatedSessions);
+            
+            // 结束编辑状态
+            setEditingSessionId(null);
+            setEditingSessionTitle('');
+        } catch (e) {
+            console.error('更新会话标题失败:', e);
+        }
+    };
+    
+    // 清空所有会话历史
+    const handleClearAllSessions = async () => {
+        // 确认是否要清空
+        const confirmClear = window.confirm('确定要删除所有会话历史吗？此操作不可恢复。');
+        if (!confirmClear) return;
+        
+        try {
+            const success = await indexedDBHelper.clearAllSessions();
+            
+            if (success) {
+                // 清空会话列表
+                setSessions([]);
+                
+                // 创建新会话
+                await createNewSession();
+                
+                // 显示成功消息
+                setClearSessionsResult('所有会话历史已清空');
+                
+                // 3秒后清除消息
+                setTimeout(() => {
+                    setClearSessionsResult(null);
+                }, 3000);
+            } else {
+                setClearSessionsResult('清空会话历史失败');
+                setTimeout(() => {
+                    setClearSessionsResult(null);
+                }, 3000);
+            }
+        } catch (error) {
+            console.error('清空会话历史失败:', error);
+            setClearSessionsResult(`清空失败: ${error.message}`);
+            setTimeout(() => {
+                setClearSessionsResult(null);
+            }, 3000);
+        }
+    };
     
     // 保存设置
     const saveSettings = () => {
@@ -464,11 +887,19 @@ const ChatWrapperComponent = props => {
             setSearchExecuting(false);
             
             // 添加一个通知消息，表示请求已被中断
-            setMessages(prev => [...prev, {
+            const interruptMessage = {
                 role: 'assistant',
                 content: '消息发送已被中断。',
-                isSystemNotice: true
-            }]);
+                isSystemNotice: true,
+                timestamp: Date.now() // 添加时间戳
+            };
+            
+            setMessages(prev => [...prev, interruptMessage]);
+            
+            // 如果有当前会话，保存中断消息到会话
+            if (currentSessionId) {
+                indexedDBHelper.saveMessageToSession(currentSessionId, interruptMessage);
+            }
         }
     };
     
@@ -482,9 +913,17 @@ const ChatWrapperComponent = props => {
         const messageToSend = content || inputValue;
         if (messageToSend.trim() === '') return;
         
+        // 确保有会话ID，如果没有则创建新会话
+        let sessionId = currentSessionId;
+        if (!sessionId) {
+            sessionId = await createNewSession();
+            setCurrentSessionId(sessionId);
+        }
+        
         const userMessage = {
             role: 'user',
-            content: messageToSend
+            content: messageToSend,
+            timestamp: Date.now() // 添加时间戳
         };
         
         // 创建新的AbortController用于本次请求
@@ -519,6 +958,22 @@ const ChatWrapperComponent = props => {
         // 重置输入框高度
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
+        }
+        
+        // 保存用户消息到会话
+        console.log(`准备保存用户消息到会话 ${sessionId}:`, userMessage);
+        try {
+            const messageId = await indexedDBHelper.saveMessageToSession(sessionId, userMessage);
+            console.log('用户消息保存成功，ID:', messageId);
+            
+            // 如果是第一条消息，更新会话列表，因为标题可能已更新
+            if (userMessage.content.length > 0) {
+                const updatedSessions = await indexedDBHelper.getSessions();
+                console.log('获取更新后的会话列表:', updatedSessions);
+                setSessions(updatedSessions);
+            }
+        } catch (error) {
+            console.error('保存用户消息失败:', error);
         }
         
         try {
@@ -571,7 +1026,8 @@ const ChatWrapperComponent = props => {
                 const toolCallMsg = {
                     role: 'assistant',
                     content: `正在执行 ${toolCallsCount} 个 Scratch ${toolType}: ${toolNames}...`,
-                    isToolCall: true
+                    isToolCall: true,
+                    timestamp: Date.now() // 添加时间戳
                 };
                 
                 setMessages(prev => [...prev, toolCallMsg]);
@@ -582,7 +1038,8 @@ const ChatWrapperComponent = props => {
                     const assistantMessage = {
                         role: 'assistant',
                         content: response.choices[0].message.content,
-                        followUpQuestions: generateFollowUpQuestions(response.choices[0].message.content)
+                        followUpQuestions: generateFollowUpQuestions(response.choices[0].message.content),
+                        timestamp: Date.now() // 添加时间戳
                     };
                     
                     // 检查是否有工具操作摘要
@@ -592,7 +1049,8 @@ const ChatWrapperComponent = props => {
                             const summaryMsg = {
                                 role: 'system',
                                 content: `工具操作结果:\n${response.toolSummary.operations.join('\n')}`,
-                                isToolSummary: true
+                                isToolSummary: true,
+                                timestamp: Date.now() // 添加时间戳
                             };
                             
                             // 添加工具摘要，仅在开发模式下显示
@@ -601,6 +1059,12 @@ const ChatWrapperComponent = props => {
                                 const filtered = prev.filter(msg => !msg.isToolCall);
                                 return [...filtered, summaryMsg, assistantMessage];
                             });
+                            
+                            // 保存工具摘要和助手消息到会话（如果存在会话ID）
+                            if (currentSessionId) {
+                                indexedDBHelper.saveMessageToSession(currentSessionId, summaryMsg);
+                                indexedDBHelper.saveMessageToSession(currentSessionId, assistantMessage);
+                            }
                         } else {
                             // 生产模式下只显示最终回复
                             setMessages(prev => {
@@ -608,6 +1072,11 @@ const ChatWrapperComponent = props => {
                                 const filtered = prev.filter(msg => !msg.isToolCall);
                                 return [...filtered, assistantMessage];
                             });
+                            
+                            // 保存助手消息到会话（如果存在会话ID）
+                            if (currentSessionId) {
+                                indexedDBHelper.saveMessageToSession(currentSessionId, assistantMessage);
+                            }
                         }
                     } else {
                         // 没有工具摘要，只添加最终回复
@@ -616,6 +1085,11 @@ const ChatWrapperComponent = props => {
                             const filtered = prev.filter(msg => !msg.isToolCall);
                             return [...filtered, assistantMessage];
                         });
+                        
+                        // 保存助手消息到会话（如果存在会话ID）
+                        if (currentSessionId) {
+                            indexedDBHelper.saveMessageToSession(currentSessionId, assistantMessage);
+                        }
                     }
                     
                     // 更新工具执行状态
@@ -628,19 +1102,41 @@ const ChatWrapperComponent = props => {
                     const assistantMessage = {
                         role: 'assistant',
                         content: response.choices[0].message.content,
-                        followUpQuestions: generateFollowUpQuestions(response.choices[0].message.content)
+                        followUpQuestions: generateFollowUpQuestions(response.choices[0].message.content),
+                        timestamp: Date.now() // 添加时间戳
                     };
                     
                     setMessages(prev => [...prev, assistantMessage]);
+                    
+                    // 保存助手消息到会话（如果存在会话ID）
+                    if (currentSessionId) {
+                        console.log(`准备保存助手消息到会话 ${currentSessionId}:`, assistantMessage);
+                        try {
+                            const messageId = await indexedDBHelper.saveMessageToSession(currentSessionId, assistantMessage);
+                            console.log('助手消息保存成功，ID:', messageId);
+                        } catch (error) {
+                            console.error('保存助手消息失败:', error);
+                        }
+                    } else {
+                        console.warn('无法保存助手消息：当前会话ID为空');
+                    }
                 }
             }
         } catch (error) {
             console.error('发送消息失败:', error);
             // 添加用户友好的错误消息
-            setMessages(prev => [...prev, {
+            const errorMessage = {
                 role: 'assistant',
-                content: `抱歉，我遇到了一点问题：${error.message}。请稍后再试，或者刷新页面重新开始。`
-            }]);
+                content: `抱歉，我遇到了一点问题：${error.message}。请稍后再试，或者刷新页面重新开始。`,
+                timestamp: Date.now() // 添加时间戳
+            };
+            
+            setMessages(prev => [...prev, errorMessage]);
+            
+            // 保存错误消息到会话（如果存在会话ID）
+            if (currentSessionId) {
+                indexedDBHelper.saveMessageToSession(currentSessionId, errorMessage);
+            }
         } finally {
             setIsLoading(false);
             setToolExecuting(false);
@@ -661,9 +1157,19 @@ const ChatWrapperComponent = props => {
     };
     
     // 清空聊天记录
-    const handleClearChat = () => {
+    const handleClearChat = async () => {
         // 重新初始化消息，但保留系统消息，仅显示初始问候
         setMessages(deepseekAPI.initializeChat().filter(msg => msg.role !== 'system'));
+        
+        // 如果当前有会话，创建新会话而不是清空当前会话
+        if (currentSessionId) {
+            const newSessionId = await createNewSession();
+            setCurrentSessionId(newSessionId);
+            
+            // 更新会话列表
+            const updatedSessions = await indexedDBHelper.getSessions();
+            setSessions(updatedSessions);
+        }
     };
     
     // 处理折叠/展开状态
@@ -768,17 +1274,21 @@ const ChatWrapperComponent = props => {
                             </h1>
                             <div className={styles.headerButtons}>
                                 <button 
+                                    className={styles.sessionsButton}
+                                    onClick={() => setShowSessionsDrawer(!showSessionsDrawer)}
+                                    title="会话历史"
+                                    aria-label="会话历史"
+                                >
+                                    <SessionsIcon />
+                                </button>
+                                <button 
                                     className={styles.clearChatButton}
                                     onClick={handleClearChat}
-                                    title="清空聊天记录"
-                                    aria-label="清空聊天记录"
+                                    title="新建会话"
+                                    aria-label="新建会话"
                                 >
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
-                                    </svg>
+                                    <AddSessionIcon />
                                 </button>
-                                
-                                {/* 添加设置按钮 */}
                                 <button 
                                     className={styles.settingsButton}
                                     onClick={() => setShowSettingsModal(true)}
@@ -822,6 +1332,10 @@ const ChatWrapperComponent = props => {
                                         }`}
                                     >
                                         <div className={styles.messageContent}>
+                                            {/* 添加消息时间戳 */}
+                                            <div className={styles.messageTimestamp}>
+                                                {message.timestamp ? new Date(message.timestamp).toLocaleString() : new Date().toLocaleString()}
+                                            </div>
                                             {message.role === 'assistant' ? (
                                                 <MessageWithMarkdown content={message.content} />
                                             ) : (
@@ -962,6 +1476,116 @@ const ChatWrapperComponent = props => {
                 </div>
             )}
             
+            {/* 会话抽屉 */}
+            {!collapsed && (
+                <>
+                    {/* 遮罩层，点击后关闭抽屉 */}
+                    <div 
+                        className={`${styles.drawerOverlay} ${showSessionsDrawer ? styles.visible : ''}`}
+                        onClick={() => setShowSessionsDrawer(false)}
+                    />
+                    
+                    {/* 会话抽屉 */}
+                    <div className={`${styles.sessionsDrawer} ${showSessionsDrawer ? styles.visible : ''}`}>
+                        <div className={styles.sessionsHeader}>
+                            <h2 className={styles.sessionsTitle}>会话历史</h2>
+                            <button 
+                                className={styles.closeSessionsButton}
+                                onClick={() => setShowSessionsDrawer(false)}
+                                title="关闭"
+                            >
+                                <CloseIcon />
+                            </button>
+                        </div>
+                        
+                        <div className={styles.sessionsList}>
+                            {sessions.map((session, index) => (
+                                <div 
+                                    key={session.id} 
+                                    className={`${styles.sessionItem} ${currentSessionId === session.id ? styles.active : ''}`}
+                                >
+                                    {editingSessionId === session.id ? (
+                                        <form 
+                                            className={styles.sessionEditForm}
+                                            onSubmit={(e) => {
+                                                e.preventDefault();
+                                                saveSessionTitle();
+                                            }}
+                                        >
+                                            <input 
+                                                type="text"
+                                                className={styles.sessionEditInput}
+                                                value={editingSessionTitle}
+                                                onChange={e => setEditingSessionTitle(e.target.value)}
+                                                autoFocus
+                                            />
+                                            <button 
+                                                type="submit" 
+                                                className={styles.saveSessionButton}
+                                                title="保存"
+                                            >
+                                                保存
+                                            </button>
+                                            <button 
+                                                type="button"
+                                                className={styles.cancelEditButton}
+                                                onClick={() => {
+                                                    setEditingSessionId(null);
+                                                    setEditingSessionTitle('');
+                                                }}
+                                                title="取消"
+                                            >
+                                                取消
+                                            </button>
+                                        </form>
+                                    ) : (
+                                        <>
+                                            <div className={styles.sessionHeader}>
+                                                <div 
+                                                    className={styles.sessionTitle}
+                                                    onClick={() => switchSession(session.id)}
+                                                    title={session.title}
+                                                >
+                                                    {session.title}
+                                                </div>
+                                                <div className={styles.sessionActions}>
+                                                    <button 
+                                                        className={styles.editSessionButton}
+                                                        onClick={() => startEditing(session.id, session.title)}
+                                                        title="编辑标题"
+                                                    >
+                                                        <EditIcon />
+                                                    </button>
+                                                    <button 
+                                                        className={styles.deleteSessionButton}
+                                                        onClick={() => deleteSessionHandler(session.id)}
+                                                        title="删除会话"
+                                                    >
+                                                        <DeleteIcon />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div className={styles.sessionInfo}>
+                                                <span className={styles.sessionNumber}>#{sessions.length - index}</span>
+                                                <span className={styles.sessionDate}>
+                                                    {new Date(session.timestamp).toLocaleString()}
+                                                </span>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            ))}
+                            
+                            {sessions.length === 0 && (
+                                <div className={styles.noSessionsMessage}>
+                                    没有会话历史记录
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </>
+            )}
+            
             {/* 设置模态框 */}
             {showSettingsModal && (
                 <Modal 
@@ -1050,6 +1674,29 @@ const ChatWrapperComponent = props => {
                                     {clearHistoryResult}
                                 </div>
                             )}
+                        </div>
+                        
+                        <div className={styles.settingItem}>
+                            <label className={styles.settingLabel}>
+                                会话历史管理
+                            </label>
+                            <div>
+                                <p className={styles.settingDescription}>
+                                    当前共有 {sessions.length} 个会话历史记录。
+                                </p>
+                                <button 
+                                    onClick={handleClearAllSessions} 
+                                    className={styles.clearHistoryButton}
+                                    title="清空所有会话历史记录"
+                                >
+                                    清空所有会话历史
+                                </button>
+                                {clearSessionsResult && (
+                                    <div className={`${styles.clearHistoryResult} ${styles.testSuccess}`}>
+                                        {clearSessionsResult}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         
                         {/* 连接测试结果显示区域 */}
