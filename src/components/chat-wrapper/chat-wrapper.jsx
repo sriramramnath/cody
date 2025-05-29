@@ -6,8 +6,7 @@ import Modal from '../modal/modal.jsx';  // 导入模态框组件
 import layout from '../../lib/layout-constants';
 import deepseekAPI from '../../lib/deepseek-api';
 import indexedDBHelper from '../../lib/indexed-db-helper';  // 导入 IndexedDB 助手
-import MessageWithCodeHighlighting from './code-highlighter.jsx';
-import MessageWithMarkdown from './message-with-markdown.jsx';  // 导入新的Markdown渲染组件
+import MessageWithMarkdown from './message-with-markdown.jsx';  // 导入Markdown渲染组件
 import {hasCodeBlocks, hasMarkdown} from './markdown-utils';  // 导入Markdown检测工具
 
 import styles from './chat-wrapper.css';
@@ -30,35 +29,75 @@ const generateFollowUpQuestions = content => {
             .map(q => q.replace(/^[0-9\-\*\.\s]+/, '').trim())  // 移除数字、破折号、星号等列表标记
             .filter(q => q && q.length > 0);  // 过滤空行
             
-        // 最多返回3个问题
-        return questions.slice(0, 3);
+        // 返回最多5个问题
+        return questions.slice(0, 5);
     }
     
-    // 基于常见后续交互的默认问题
+    // 基于常见后续交互的默认问题，确保包含画布操作相关问题
     const defaultQuestions = [
-        "还能进一步完善这个程序吗？",
-        "如何修改这些积木？",
-        "能解释一下这段代码是如何工作的吗？"
+        "如何让角色在画布上画出彩色图案？",
+        "能让角色随着音乐跳舞吗？",
+        "怎样创建一个会变色的特效？",
+        "如何制作一个互动故事？",
+        "能在舞台上添加一些有趣的动画效果吗？"
     ];
     
     // 根据内容选择合适的后续问题
     if (content.includes("创建") || content.includes("添加")) {
         return [
-            "如何让角色移动？",
-            "怎么添加声音效果？",
-            "能让角色说话吗？"
+            "如何让角色在画布上留下痕迹？",
+            "怎么添加会变色的视觉效果？",
+            "能让角色对鼠标点击做出反应吗？",
+            "如何创建一个角色之间的对话？",
+            "能设计一个带有粒子效果的场景吗？"
         ];
     } else if (content.includes("移动") || content.includes("旋转")) {
         return [
-            "如何控制移动速度？",
-            "怎样让角色碰到边缘时反弹？",
-            "能让角色跟随鼠标移动吗？"
+            "如何让角色在舞台上画出螺旋图案？",
+            "怎样让角色沿着自定义路径移动？",
+            "能让多个角色跟随彼此移动吗？",
+            "如何创建一个迷宫游戏的移动效果？",
+            "能让角色在移动时改变颜色吗？"
         ];
     } else if (content.includes("变量") || content.includes("计分")) {
         return [
-            "如何显示分数？",
-            "能制作一个计时器吗？",
-            "怎样让游戏难度随着分数增加？"
+            "如何用变量控制角色的视觉效果？",
+            "能用计分来改变舞台背景吗？",
+            "怎样创建一个随分数变色的计分板？",
+            "如何使用变量制作动态动画效果？",
+            "能用变量控制画笔的粗细和颜色吗？"
+        ];
+    } else if (content.includes("画布") || content.includes("绘制") || content.includes("画笔")) {
+        return [
+            "如何用画笔创建万花筒效果？",
+            "能让多个角色同时在画布上绘制吗？",
+            "如何创建一个绘画游戏？",
+            "怎样用画笔制作粒子爆炸效果？",
+            "能用画笔绘制3D效果吗？"
+        ];
+    } else if (content.includes("背景") || content.includes("舞台")) {
+        return [
+            "如何创建一个视差滚动背景？",
+            "能让背景随音乐节奏变化吗？",
+            "怎样制作一个昼夜交替的舞台效果？",
+            "如何让舞台上的元素产生互动？",
+            "能设计一个多层次的舞台场景吗？"
+        ];
+    } else if (content.includes("颜色") || content.includes("效果")) {
+        return [
+            "如何创建彩虹渐变效果？",
+            "能让角色随音乐变换颜色吗？",
+            "怎样制作闪光或发光的特效？",
+            "如何创建水波纹或波浪效果？",
+            "能设计一个颜色混合的实验吗？"
+        ];
+    } else if (content.includes("游戏") || content.includes("互动")) {
+        return [
+            "如何制作一个带有视觉反馈的点击游戏？",
+            "能创建一个有动态背景的迷宫游戏吗？",
+            "怎样添加视觉特效作为游戏奖励？",
+            "如何让游戏角色有多种视觉状态？",
+            "能在游戏中添加粒子效果吗？"
         ];
     }
     
@@ -994,19 +1033,14 @@ const ChatWrapperComponent = props => {
                 return;
             }
 
-            // 检查是否有工具调用
-            if (response.choices && 
-                response.choices[0] && 
-                response.choices[0].message && 
-                response.choices[0].message.tool_calls && 
-                response.choices[0].message.tool_calls.length > 0) {
-                
+            // 检查是否有待处理的工具调用
+            if (response.pendingToolCalls && response.pendingToolCalls.length > 0) {
                 // 显示工具调用开始消息
-                const toolCallsCount = response.choices[0].message.tool_calls.length;
+                const toolCallsCount = response.pendingToolCalls.length;
                 
                 // 检查是否有搜索工具调用
-                const hasSearchCall = response.choices[0].message.tool_calls.some(
-                    tc => tc.function?.name === 'bingSearch'
+                const hasSearchCall = response.pendingToolCalls.some(
+                    tc => tc.name === 'bingSearch'
                 );
                 
                 // 根据工具类型显示适当的消息
@@ -1018,8 +1052,8 @@ const ChatWrapperComponent = props => {
                     setToolExecuting(true);
                 }
                 
-                const toolNames = response.choices[0].message.tool_calls
-                    .map(tc => tc.function?.name)
+                const toolNames = response.pendingToolCalls
+                    .map(tc => tc.name)
                     .filter(Boolean)
                     .join(', ');
                 
@@ -1033,22 +1067,32 @@ const ChatWrapperComponent = props => {
                 setMessages(prev => [...prev, toolCallMsg]);
                 setToolExecuting(true);
                 
-                // 收到带工具调用的最终响应后
-                if (response.choices && response.choices.length > 0) {
+                // 在本地执行工具调用
+                const toolExecutionResult = await deepseekAPI.executeToolCalls(response.pendingToolCalls);
+                
+                // 将工具执行结果发送回 DeepSeek API
+                const finalResponse = await deepseekAPI.sendToolResults(
+                    messageHistory,
+                    response,
+                    toolExecutionResult
+                );
+                
+                // 处理最终响应
+                if (finalResponse.choices && finalResponse.choices.length > 0) {
                     const assistantMessage = {
                         role: 'assistant',
-                        content: response.choices[0].message.content,
-                        followUpQuestions: generateFollowUpQuestions(response.choices[0].message.content),
+                        content: finalResponse.choices[0].message.content,
+                        followUpQuestions: generateFollowUpQuestions(finalResponse.choices[0].message.content),
                         timestamp: Date.now() // 添加时间戳
                     };
                     
                     // 检查是否有工具操作摘要
-                    if (response.toolSummary && response.toolSummary.operations) {
+                    if (finalResponse.toolSummary && finalResponse.toolSummary.operations) {
                         // 添加工具操作摘要（仅在开发模式下）
                         if (process.env.NODE_ENV === 'development') {
                             const summaryMsg = {
                                 role: 'system',
-                                content: `工具操作结果:\n${response.toolSummary.operations.join('\n')}`,
+                                content: `工具操作结果:\n${finalResponse.toolSummary.operations.join('\n')}`,
                                 isToolSummary: true,
                                 timestamp: Date.now() // 添加时间戳
                             };
@@ -1091,10 +1135,6 @@ const ChatWrapperComponent = props => {
                             indexedDBHelper.saveMessageToSession(currentSessionId, assistantMessage);
                         }
                     }
-                    
-                    // 更新工具执行状态
-                    setToolExecuting(false);
-                    setSearchExecuting(false);
                 }
             } else {
                 // 常规消息处理（无工具调用）

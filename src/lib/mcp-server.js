@@ -10,12 +10,12 @@ class MCPServer {
     /**
      * Creates a new MCP Server instance
      * @param {Object} vm - The Scratch virtual machine instance
-     * @param {Object} blocks - The ScratchBlocks instance 
+     * @param {Object} blocks - The ScratchBlocks instance (optional)
      * @param {Object} props - Additional properties and components
      */
     constructor (vm, blocks, props = {}) {
         this.vm = vm;
-        this.blocks = blocks;
+        this.blocks = blocks || null; // Make blocks optional
         this.props = props;
 
         // Store registered tools
@@ -853,10 +853,166 @@ class MCPServer {
      */
     getToolDefinitions() {
         return Object.entries(this.tools).map(([name, tool]) => ({
-            name,
-            description: tool.description,
-            parameters: tool.parameters
+            type: 'function',
+            function: {
+                name,
+                description: tool.description,
+                parameters: tool.parameters
+            }
         }));
+    }
+
+    /**
+     * Get current Scratch context information including sprites, blocks, and project state
+     * @returns {Object} Current Scratch context with detailed information
+     */
+    getScratchContext() {
+        try {
+            const context = {
+                sprites: [],
+                currentBlocksInfo: {},
+                stageInfo: {},
+                projectInfo: {},
+                canvasState: {}
+            };
+            
+            // Get all sprites information
+            const targets = this.vm.runtime.targets;
+            if (targets) {
+                targets.forEach(target => {
+                    if (!target.isStage) {
+                        // For sprites - include richer information
+                        const spriteInfo = {
+                            id: target.id,
+                            name: target.sprite.name,
+                            visible: target.visible,
+                            x: target.x,
+                            y: target.y,
+                            size: target.size,
+                            direction: target.direction,
+                            layerOrder: target.layerOrder,
+                            effects: target.effects,
+                            currentCostume: target.currentCostume,
+                            currentCostumeName: target.sprite.costumes[target.currentCostume] ? 
+                                target.sprite.costumes[target.currentCostume].name : 'unknown',
+                            costumes: target.sprite.costumes.map(c => ({
+                                name: c.name,
+                                assetId: c.assetId,
+                                dataFormat: c.dataFormat
+                            })),
+                            blocks: {}
+                        };
+                        
+                        // Get blocks for this sprite
+                        if (target.blocks) {
+                            const blocks = target.blocks._blocks;
+                            if (blocks) {
+                                // Only include top-level blocks to keep the context concise
+                                const topLevelBlocks = {};
+                                Object.values(blocks).forEach(block => {
+                                    if (block.topLevel) {
+                                        topLevelBlocks[block.id] = {
+                                            opcode: block.opcode,
+                                            next: block.next,
+                                            inputs: block.inputs
+                                        };
+                                    }
+                                });
+                                spriteInfo.blocks = topLevelBlocks;
+                            }
+                        }
+                        
+                        context.sprites.push(spriteInfo);
+                    } else {
+                        // For stage
+                        context.stageInfo = {
+                            id: target.id,
+                            name: 'Stage',
+                            currentCostume: target.currentCostume,
+                            costumes: target.sprite.costumes.map(c => ({
+                                name: c.name,
+                                assetId: c.assetId,
+                                dataFormat: c.dataFormat
+                            }))
+                        };
+                    }
+                });
+            }
+            
+            // Get current editing target's blocks
+            const editingTarget = this.vm.editingTarget;
+            if (editingTarget && editingTarget.blocks) {
+                context.currentBlocksInfo = {
+                    targetId: editingTarget.id,
+                    targetName: editingTarget.sprite.name,
+                    isStage: editingTarget.isStage
+                };
+            }
+            
+            // Get project info
+            const projectData = this.vm.toJSON();
+            if (projectData) {
+                context.projectInfo = {
+                    name: this.vm.runtime.projectTitle || 'Untitled',
+                    hasUnsavedChanges: this.vm.runtime.hasUnsavedChanges || false,
+                    spriteCount: context.sprites.length,
+                    stageWidth: this.vm.runtime.stageWidth || 480,
+                    stageHeight: this.vm.runtime.stageHeight || 360
+                };
+            }
+            
+            // Get canvas state for visual context
+            context.canvasState = {
+                isRunning: this.vm.runtime.isRunning, 
+                editorMode: this.vm.runtime.isRealtimeMode ? 'realtime' : 'normal',
+                visibleLayer: this.vm.runtime.renderer && this.vm.runtime.renderer._visibleDrawMode || 'default',
+                frameRate: this.vm.runtime && this.vm.runtime.frameLoop && 
+                    this.vm.runtime.frameLoop.framerate !== undefined && 
+                    typeof this.vm.runtime.frameLoop.framerate === 'number' ? 
+                    Math.round(this.vm.runtime.frameLoop.framerate) : 30 // 使用默认值30如果framerate不可用
+            };
+            
+            // Add execution information if project is running
+            if (this.vm.runtime.isRunning) {
+                context.executionInfo = {
+                    activeThreads: (this.vm.runtime && Array.isArray(this.vm.runtime.threads)) ? 
+                        this.vm.runtime.threads.filter(thread => 
+                            thread && 
+                            typeof thread === 'object' && 
+                            typeof thread.isRunning === 'function' && 
+                            thread.isRunning()
+                        ).length : 0,
+                    isGreenFlagRunning: this.vm.runtime && 
+                                      this.vm.runtime._events && 
+                                      this.vm.runtime._events.PROJECT_RUN_START
+                };
+            }
+            
+            return context;
+        } catch (error) {
+            console.error('Error getting Scratch context:', error);
+            // 返回一个最小但有效的上下文对象
+            return {
+                error: `获取Scratch上下文信息失败: ${error.message}`,
+                sprites: [],
+                blockInfo: {},
+                stageInfo: {
+                    name: 'Stage',
+                    costumes: []
+                },
+                projectInfo: {
+                    name: this.vm && this.vm.runtime && this.vm.runtime.projectTitle || 'Untitled',
+                    spriteCount: 0
+                },
+                currentBlocksInfo: {},
+                canvasState: {
+                    isRunning: false,
+                    editorMode: 'normal',
+                    visibleLayer: 'default',
+                    frameRate: 30
+                }
+            };
+        }
     }
 
     /**
