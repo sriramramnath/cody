@@ -17,6 +17,7 @@ class MCPServer {
         this.vm = vm;
         this.blocks = blocks || null; // Make blocks optional
         this.props = props;
+        this.vmBridge = props.vmBridge || null; // Get VMBridge if provided
 
         // Store registered tools
         this.tools = {};
@@ -64,20 +65,55 @@ class MCPServer {
 
                     const { blockType, inputs = {}, position = { x: 0, y: 0 } } = params;
                     
-                    // Creating block in the VM
-                    const blockId = this.vm.runtime.makeBlock({
-                        opcode: blockType,
-                        fields: {},
-                        inputs: this._formatBlockInputs(inputs),
-                        topLevel: true,
-                        shadow: false,
-                        x: position.x,
-                        y: position.y
-                    });
-
+                    let blockId;
+                    try {
+                        // Use VMBridge if available, otherwise direct VM access
+                        if (this.vmBridge) {
+                            blockId = this.vmBridge.createBlock(
+                                null, // current sprite
+                                blockType,
+                                inputs,
+                                position
+                            );
+                        } else {
+                            // Creating block directly in the VM using the editingTarget.blocks
+                            const target = this.vm.editingTarget;
+                            blockId = target.blocks.createBlock({
+                                id: null, // Let the VM generate an ID
+                                opcode: blockType,
+                                fields: {},
+                                inputs: this._formatBlockInputs(inputs),
+                                topLevel: true,
+                                shadow: false,
+                                x: position.x,
+                                y: position.y
+                            });
+                        }
+                        
+                        // Verify block was created by checking if it exists
+                        if (!blockId) {
+                            throw new Error('Block ID not returned after creation');
+                        }
+                        
+                        // Double check block exists in the workspace
+                        const blockExists = this.vmBridge ? 
+                            this.vmBridge.getBlock(blockId) : 
+                            this.vm.editingTarget.blocks.getBlock(blockId);
+                            
+                        if (!blockExists) {
+                            throw new Error(`Block was created but not found in workspace: ${blockId}`);
+                        }
+                    } catch (createError) {
+                        console.error('Error during block creation:', createError);
+                        return {
+                            success: false,
+                            error: `Failed to create block: ${createError.message}`
+                        };
+                    }                    // 返回清晰的成功信息和块 ID
                     return { 
-                        success: true, 
+                        success: true,
                         blockId,
+                        opcode: blockType,
                         message: `Created ${blockType} block with ID ${blockId}`
                     };
                 } catch (error) {
@@ -105,7 +141,20 @@ class MCPServer {
             handler: async (params) => {
                 try {
                     const { blockId } = params;
-                    this.vm.deleteBlock(blockId);
+                    
+                    if (!this.vm.editingTarget) {
+                        return { success: false, error: 'No active sprite selected' };
+                    }
+                    
+                    if (this.vmBridge) {
+                        const success = this.vmBridge.deleteBlock(blockId);
+                        if (!success) {
+                            return { success: false, error: `Failed to delete block ${blockId}` };
+                        }
+                    } else {
+                        this.vm.editingTarget.blocks.deleteBlock(blockId);
+                    }
+                    
                     return { 
                         success: true,
                         message: `Block ${blockId} deleted successfully` 
@@ -151,32 +200,72 @@ class MCPServer {
                     if (!this.vm.editingTarget) {
                         return { success: false, error: 'No active sprite selected' };
                     }
-                    
-                    // Get both blocks from the current editing target
-                    const target = this.vm.editingTarget;
-                    const blocks = target.blocks;
-                    
-                    const parentBlock = blocks.getBlock(parentBlockId);
-                    const childBlock = blocks.getBlock(childBlockId);
-                    
+
+                    // 确保块ID是字符串
+                    const parentId = String(parentBlockId);
+                    const childId = String(childBlockId);
+
+                    // 无论使用什么方式，先检查块是否存在
+                    const blocks = this.vm.editingTarget.blocks;
+                    const parentBlock = blocks.getBlock(parentId);
+                    const childBlock = blocks.getBlock(childId);
+
                     if (!parentBlock) {
-                        return { success: false, error: `Parent block ${parentBlockId} not found` };
+                        return { success: false, error: `Parent block ${parentId} not found` };
                     }
                     
                     if (!childBlock) {
-                        return { success: false, error: `Child block ${childBlockId} not found` };
+                        return { success: false, error: `Child block ${childId} not found` };
                     }
+
+                    // 确定正确的连接输入
+                    const actualInputName = connectionType === 'input' ? 
+                        (inputName || 'next') : 'next';
                     
-                    // Connect blocks based on connection type
-                    if (connectionType === 'next') {
-                        // Connect as a sequence (below the parent)
-                        blocks.connect(parentBlockId, childBlockId, 'next');
-                    } else if (connectionType === 'input') {
-                        // Connect as an input (inside the parent)
-                        if (!inputName) {
-                            return { success: false, error: 'Input name required for input connection type' };
+                    try {
+                        // Use VMBridge if available
+                        if (this.vmBridge) {
+                            const connected = this.vmBridge.connectBlocks(
+                                parentId, 
+                                childId, 
+                                actualInputName
+                            );
+                            
+                            if (!connected) {
+                                return { 
+                                    success: false, 
+                                    error: `Failed to connect blocks. Connection failed with VMBridge.` 
+                                };
+                            }
+                        } else {
+                            // 直接使用VM方式连接块
+                            blocks.connect(parentId, childId, actualInputName);
                         }
-                        blocks.connect(parentBlockId, childBlockId, inputName);
+                        
+                        // 验证连接是否成功
+                        const updatedParent = blocks.getBlock(parentId);
+                        if (connectionType === 'next' && (!updatedParent.next || updatedParent.next !== childId)) {
+                            return { 
+                                success: false, 
+                                error: `连接似乎已执行，但块未正确链接。请检查块类型是否兼容。` 
+                            };
+                        }
+                        
+                        // 成功连接
+                        return {
+                            success: true,
+                            parentBlockId: parentId,
+                            childBlockId: childId,
+                            connectionType,
+                            inputName: actualInputName,
+                            message: `成功连接块 ${childId} 到 ${parentId}`
+                        };
+                        
+                    } catch (connectionError) {
+                        return { 
+                            success: false, 
+                            error: `Connection error: ${connectionError.message}` 
+                        };
                     }
                     
                     return { 
@@ -1055,21 +1144,117 @@ class MCPServer {
         try {
             const { name, arguments: args } = toolCall;
             
+            log.info(`处理工具调用: ${name}`);
+            
             let params = {};
             try {
                 params = typeof args === 'string' ? JSON.parse(args) : args;
+                log.info(`工具参数:`, params);
             } catch (e) {
-                return { success: false, error: `Invalid tool arguments: ${e.message}` };
+                log.error(`参数解析错误:`, e);
+                return { success: false, error: `无效的工具参数: ${e.message}` };
             }
             
-            return await this.executeTool(name, params);
+            // 执行前验证VM和工具的可用性
+            if (!this.vm) {
+                return { success: false, error: `VM实例不可用` };
+            }
+            
+            if (!this.tools[name]) {
+                return { success: false, error: `未知工具: ${name}` };
+            }
+            
+            // 记录块创建/连接操作的详细信息
+            if (name === 'createBlock') {
+                log.info(`创建块 ${params.blockType} 详情:`, JSON.stringify(params));
+            } else if (name === 'connectBlocks') {
+                log.info(`连接块 ${params.parentBlockId} -> ${params.childBlockId} 详情:`, JSON.stringify(params));
+            }
+            
+            // 执行工具并捕获结果
+            const result = await this.executeTool(name, params);
+            
+            // 增强结果信息以改进调试
+            if (result.success) {
+                // 成功结果增加更多诊断信息
+                if (name === 'createBlock' && result.blockId) {
+                    // 验证块是否实际存在
+                    const blockExists = this.vmBridge ? 
+                        this.vmBridge.getBlock(result.blockId) : 
+                        this.vm.editingTarget.blocks.getBlock(result.blockId);
+                        
+                    // 增加诊断信息
+                    result.blockStatus = blockExists ? 'confirmed' : 'not-found-after-creation';
+                    result.blockDetails = blockExists || null;
+                } else if (name === 'connectBlocks') {
+                    result.connectionDetails = {
+                        parentId: params.parentBlockId,
+                        childId: params.childBlockId,
+                        inputName: params.inputName || 'next',
+                        timestamp: Date.now()
+                    };
+                }
+            } else {
+                // 失败结果增加故障排除信息
+                result.timestamp = Date.now();
+                result.troubleshootingTips = this._getTroubleshootingTips(name, params, result.error);
+            }
+            
+            return result;
         } catch (error) {
-            log.error('Error processing tool call:', error);
+            log.error('处理工具调用时出错:', error);
             return { 
                 success: false, 
-                error: `Failed to process tool call: ${error.message}` 
+                error: `工具调用处理失败: ${error.message}`,
+                timestamp: Date.now(),
+                troubleshootingTips: this._getTroubleshootingTips('general', {}, error.message)
             };
         }
+    }
+    
+    /**
+     * 获取特定工具错误的故障排除提示
+     * @private
+     * @param {string} toolName - 工具名称
+     * @param {Object} params - 工具参数
+     * @param {string} errorMessage - 错误消息
+     * @returns {Array} 故障排除提示列表
+     */
+    _getTroubleshootingTips(toolName, params, errorMessage) {
+        const tips = [];
+        
+        // 通用提示
+        tips.push('检查Scratch VM是否已初始化并准备好接受指令');
+        
+        // 特定工具提示
+        switch (toolName) {
+            case 'createBlock':
+                tips.push('确保提供的块类型(blockType)在Scratch中有效');
+                tips.push('检查输入参数是否符合块类型的要求');
+                break;
+                
+            case 'connectBlocks':
+                tips.push('确保要连接的两个块ID都有效并且块已创建成功');
+                tips.push('验证父块和子块的类型是否兼容');
+                tips.push('连接前先使用getBlock检查块是否存在');
+                break;
+                
+            case 'general':
+                tips.push('检查工具名称是否正确');
+                tips.push('检查工具参数是否完整且格式正确');
+                break;
+        }
+        
+        // 基于错误消息的额外提示
+        if (errorMessage) {
+            if (errorMessage.includes('not found') || errorMessage.includes('未找到')) {
+                tips.push('块可能未成功创建，检查之前的createBlock操作是否返回有效ID');
+            } else if (errorMessage.includes('ID not returned') || errorMessage.includes('ID未返回')) {
+                tips.push('尝试使用自定义ID创建块，而不是依赖VM生成ID');
+            }
+        }
+        
+        return tips;
     }
 }
 

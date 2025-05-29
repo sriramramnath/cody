@@ -444,7 +444,7 @@ const getToolDefinitions = () => {
 const prepareRequestBody = (messages, options) => {
     const {
         temperature = apiSettings.temperature,
-        maxTokens = 8192,
+        maxTokens = 2048,
         model = apiSettings.modelName
     } = options;
     
@@ -516,14 +516,15 @@ ${scratchContext.stageInfo && scratchContext.stageInfo.costumes && Array.isArray
   ? `- 当前背景: ${scratchContext.stageInfo.costumes[typeof scratchContext.stageInfo.currentCostume === 'number' ? scratchContext.stageInfo.currentCostume : 0]?.name || 'unknown'}` 
   : ''}
 
-## 工具使用指南
-1. 始终优先使用MCP工具在Scratch中直接操作，而不是文字描述
-2. 使用createBlock来创建新积木，必要时使用connectBlocks连接它们
-3. 使用setSpritePosition、setSpriteSize等工具调整角色属性
-4. 有视觉展示需求时，优先在画布上操作展示，而不是描述
-5. 如果你认为代码效果需要展示，直接使用工具在Scratch中实现
+## 工具使用指南 (必须遵守)
+1. 必须使用MCP工具来操作Scratch项目，不允许只使用文字描述
+2. 必须调用createBlock创建积木代码，并使用connectBlocks连接它们
+3. 必须通过setSpritePosition、setSpriteSize等工具调整角色，而不是口头描述
+4. 对任何可视化的内容，必须在画布上直接操作展示
+5. 每次回答必须至少包含一个工具调用
 
-记住：通过实际操作Scratch项目来展示概念比文字描述更直观、更有教育意义！
+记住：你的首要任务是通过工具操作Scratch项目，文字只用于补充解释，不能替代工具操作！
+对任何请求，都应该首先分析需要哪些工具来完成，然后立即调用这些工具。
 `;
         
         try {
@@ -561,8 +562,23 @@ ${scratchContext.stageInfo && scratchContext.stageInfo.costumes && Array.isArray
     const toolDefinitions = getToolDefinitions();
     if (toolDefinitions.length > 0) {
         requestBody.tools = toolDefinitions;
-        // 设置工具选择偏好为 "auto"，根据 DeepSeek API 的要求
-        requestBody.tool_choice = "auto";
+        
+        // 修改：设置工具选择偏好为强制使用工具
+        // DeepSeek API需要特定的工具选择方式
+        const firstTool = toolDefinitions[0];
+        requestBody.tool_choice = {
+            type: "function",
+            function: {
+                name: firstTool.function.name
+            }
+        };
+        
+        // 在某些情况下使用auto模式
+        if (messages.length > 0 && messages[messages.length - 1].content && 
+            !messages[messages.length - 1].content.includes('必须使用') && 
+            !messages[messages.length - 1].content.includes('tool')) {
+            requestBody.tool_choice = "auto";
+        }
     }
     
     return requestBody;
@@ -768,23 +784,109 @@ const executeToolCalls = async (pendingToolCalls) => {
             const normalizedArgs = normalizeToolArguments(toolCall.arguments);
             console.log(`执行 ${toolName} 的规范化参数:`, JSON.stringify(normalizedArgs));
             
+            // 为创建积木操作准备额外的调试信息
+            if (toolName === 'createBlock') {
+                console.log(`创建积木: 类型=${normalizedArgs.blockType}, 参数=`, normalizedArgs.inputs);
+            } else if (toolName === 'connectBlocks') {
+                console.log(`连接积木: 父块=${normalizedArgs.parentBlockId}, 子块=${normalizedArgs.childBlockId}`);
+            }
+            
             // 处理不同类型的工具调用
             if (toolName === 'bingSearch') {
                 // 处理 Bing 搜索工具调用
                 result = await handleBingSearchToolCall(normalizedArgs);
             } else if (mcpServer) {
-                // 使用 MCP 服务器处理其他工具调用
-                result = await mcpServer.processToolCall({
-                    name: toolName,
-                    arguments: normalizedArgs
-                });
+                try {
+                    // 使用 MCP 服务器处理其他工具调用
+                    result = await mcpServer.processToolCall({
+                        name: toolName,
+                        arguments: normalizedArgs
+                    });
+                    
+                    // 如果是创建块，保存块ID供后续可能的连接使用
+                    if (toolName === 'createBlock' && result.success && result.blockId) {
+                        // 跟踪创建的块，为后续连接做准备
+                        console.log(`块创建成功: ${result.blockId} (${result.opcode})`);
+                        
+                        // 将创建的块ID保存到全局缓存，使其可用于后续操作
+                        if (!window.mcpBlockCache) {
+                            window.mcpBlockCache = {};
+                        }
+                        
+                        // 保存块信息到缓存
+                        window.mcpBlockCache[result.blockId] = {
+                            id: result.blockId,
+                            opcode: result.opcode,
+                            createdAt: Date.now()
+                        };
+                        
+                        // 记录最新创建的块，便于后续连接
+                        window.mcpBlockCache.lastCreatedBlockId = result.blockId;
+                        
+                        console.log(`已将块信息保存到缓存，当前缓存中有 ${Object.keys(window.mcpBlockCache).length - 1} 个块`);
+                    }
+                } catch (processError) {
+                    console.error(`MCP 服务器处理工具调用时出错:`, processError);
+                    result = {
+                        success: false,
+                        error: `处理工具调用时出错: ${processError.message}`
+                    };
+                }
             } else {
                 result = {
                     success: false,
                     error: `未知工具: ${toolName}`
                 };
+            }                // 为返回结果添加更多上下文信息
+            if (result.success) {
+                // 添加额外信息以帮助 DeepSeek 理解结果
+                if (toolName === 'createBlock') {
+                    result.contextHint = `你成功创建了一个 ${result.opcode} 块，块ID是 ${result.blockId}。使用这个块ID进行后续操作。`;
+                    
+                    // 提醒AI保存块ID以供后续连接
+                    result.nextSteps = `要连接这个块，请记住块ID: ${result.blockId}。你可以用它作为parentBlockId或childBlockId参数`;
+                    
+                    // 检查块是否真的被创建
+                    if (result.blockStatus === 'not-found-after-creation') {
+                        result.warning = `警告：块已创建但无法立即访问。这可能是暂时性问题，尝试连接时仍可使用此ID。`;
+                    }
+                } else if (toolName === 'connectBlocks') {
+                    result.contextHint = `你成功将块 ${result.childBlockId} 连接到了块 ${result.parentBlockId}。`;
+                    
+                    // 添加有关是否需要刷新工作区的建议
+                    if (result.connectionDetails) {
+                        result.nextSteps = `连接已建立但可能需要几毫秒才会在工作区中可见。`;
+                    }
+                }
+            } else {
+                // 对于常见错误提供更多指导和自动恢复建议
+                if (result.error && result.error.includes('not found')) {
+                    result.troubleshootingHint = '确保在连接块之前先创建它们，并使用准确的块ID。';
+                    
+                    // 如果块创建后未找到，添加恢复建议
+                    if (toolName === 'createBlock') {
+                        result.recoveryTips = '尝试再次创建块，或使用不同的块类型。某些类型在特定上下文中可能无法创建。';
+                    } else if (toolName === 'connectBlocks') {
+                        // 提供块缓存中的可用块ID
+                        const availableBlockIds = window.mcpBlockCache ? 
+                            Object.keys(window.mcpBlockCache).filter(k => k !== 'lastCreatedBlockId') : [];
+                            
+                        if (availableBlockIds.length > 0) {
+                            result.availableBlocks = availableBlockIds;
+                            result.recoveryTips = `尝试使用这些已知有效的块ID: ${availableBlockIds.slice(0, 3).join(', ')}${availableBlockIds.length > 3 ? '...' : ''}`;
+                        }
+                    }
+                } else if (toolName === 'connectBlocks') {
+                    result.troubleshootingHint = '检查块ID是否正确，并确保块类型兼容。某些块不能直接连接。';
+                    
+                    // 建议使用最近创建的块
+                    if (window.mcpBlockCache && window.mcpBlockCache.lastCreatedBlockId) {
+                        result.lastCreatedBlockId = window.mcpBlockCache.lastCreatedBlockId;
+                        result.recoveryTips = `尝试使用最近创建的块ID: ${window.mcpBlockCache.lastCreatedBlockId}`;
+                    }
+                }
             }
-            
+
             toolResults.push({
                 tool_call_id: toolCall.id,
                 role: 'tool',
@@ -792,11 +894,25 @@ const executeToolCalls = async (pendingToolCalls) => {
                 content: JSON.stringify(result)
             });
             
-            // 添加到操作摘要
+            // 添加到操作摘要，丰富信息
             if (result.success) {
-                toolSummaries.push(`✅ ${toolName}: ${result.message || '成功'}`);
+                let successMsg = `✅ ${toolName}: ${result.message || '成功'}`;
+                
+                // 对特定工具添加更多信息
+                if (toolName === 'createBlock' && result.blockId) {
+                    successMsg += ` (ID: ${result.blockId})`;
+                }
+                
+                toolSummaries.push(successMsg);
             } else {
-                toolSummaries.push(`❌ ${toolName}: ${result.error || '失败'}`);
+                let errorMsg = `❌ ${toolName}: ${result.error || '失败'}`;
+                
+                // 对特定工具的错误添加提示
+                if (toolName === 'connectBlocks' && result.error && result.error.includes('not found')) {
+                    errorMsg += ' - 请先创建所需的块';
+                }
+                
+                toolSummaries.push(errorMsg);
                 hasErrors = true;
             }
         } catch (error) {
@@ -928,8 +1044,8 @@ ${options.toolSummary.visualToolsUsed > 2 ? '👍 很棒！继续使用工具让
         if (lastMessage && lastMessage.role === 'user') {
             const originalContent = lastMessage.content;
             
-            // 根据用户消息内容添加上下文相关的提示
-            let toolPrompt = '(请使用MCP工具在Scratch中直接展示，而不仅是描述。例如：';
+            // 根据用户消息内容添加上下文相关的提示，使用更强烈的语气要求使用工具
+            let toolPrompt = '(必须使用MCP工具在Scratch中直接展示，不要只用文字描述。必须调用function工具。例如：';
             
             // 分析消息内容，推荐可能相关的工具
             if (/添加|创建|新建|制作|做一个|加入|增加/.test(originalContent)) {
