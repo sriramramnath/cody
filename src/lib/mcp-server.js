@@ -78,16 +78,38 @@ class MCPServer {
                         } else {
                             // Creating block directly in the VM using the editingTarget.blocks
                             const target = this.vm.editingTarget;
-                            blockId = target.blocks.createBlock({
-                                id: null, // Let the VM generate an ID
-                                opcode: blockType,
-                                fields: {},
-                                inputs: this._formatBlockInputs(inputs),
-                                topLevel: true,
-                                shadow: false,
-                                x: position.x,
-                                y: position.y
-                            });
+                            
+                            // Generate a unique block ID since passing null might not work consistently
+                            const customBlockId = `block_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+                            
+                            // Try to create block using proper Blockly event simulation
+                            try {
+                                blockId = this._createBlockWithEvent(target, {
+                                    id: customBlockId,
+                                    opcode: blockType,
+                                    inputs: this._formatBlockInputs(inputs),
+                                    position: position
+                                });
+                            } catch (eventError) {
+                                log.warn('Event-based block creation failed, falling back to direct creation:', eventError);
+                                
+                                // Fallback to direct block creation
+                                blockId = target.blocks.createBlock({
+                                    id: customBlockId,
+                                    opcode: blockType,
+                                    fields: {},
+                                    inputs: this._formatBlockInputs(inputs),
+                                    topLevel: true,
+                                    shadow: false,
+                                    x: position.x,
+                                    y: position.y
+                                });
+                                
+                                // If VM didn't return the ID, use our custom one
+                                if (!blockId) {
+                                    blockId = customBlockId;
+                                }
+                            }
                         }
                         
                         // Verify block was created by checking if it exists
@@ -1125,6 +1147,14 @@ class MCPServer {
             const result = await tool.handler(params);
             log.info(`Tool execution result:`, result);
             
+            // Ensure workspace is refreshed for successful block operations
+            if (result.success && this._isBlockRelatedTool(toolName)) {
+                // Add a small delay to ensure block creation is complete
+                setTimeout(() => {
+                    this._refreshWorkspace();
+                }, 0);
+            }
+            
             return result;
         } catch (error) {
             log.error(`Error executing tool ${toolName}:`, error);
@@ -1255,6 +1285,132 @@ class MCPServer {
         }
         
         return tips;
+    }
+    
+    /**
+     * Check if a tool is block-related and should trigger workspace refresh
+     * @private
+     * @param {string} toolName - Name of the tool
+     * @returns {boolean} True if the tool is block-related
+     */
+    _isBlockRelatedTool(toolName) {
+        const blockTools = ['createBlock', 'deleteBlock', 'connectBlocks'];
+        return blockTools.includes(toolName);
+    }
+    
+    /**
+     * Create a block using proper Blockly event simulation
+     * This simulates the events that would normally come from the Blockly UI
+     * @private
+     * @param {Object} target - The target sprite
+     * @param {Object} blockSpec - Block specification
+     * @returns {string} Block ID
+     */
+    _createBlockWithEvent(target, blockSpec) {
+        if (!target || !target.blocks) {
+            throw new Error('Invalid target for block creation');
+        }
+        
+        // Create a Blockly-style create event
+        const createEvent = {
+            type: 'create',
+            blockId: blockSpec.id,
+            xml: this._generateBlockXML(blockSpec),
+            workspaceId: target.id,
+            recordUndo: true
+        };
+        
+        log.info('Simulating Blockly create event:', createEvent);
+        
+        // Use the VM's block listener to process the event (if available)
+        if (this.vm.blockListener && typeof this.vm.blockListener === 'function') {
+            this.vm.blockListener(createEvent);
+            log.info('Block created via VM blockListener');
+        } else {
+            // Fallback: use target's blocklyListen method directly
+            target.blocks.blocklyListen(createEvent);
+            log.info('Block created via target blocklyListen');
+        }
+        
+        return blockSpec.id;
+    }
+    
+    /**
+     * Generate XML for a block specification
+     * @private
+     * @param {Object} blockSpec - Block specification
+     * @returns {string} XML representation
+     */
+    _generateBlockXML(blockSpec) {
+        const { id, opcode, inputs, position } = blockSpec;
+        
+        let xml = `<block type="${opcode}" id="${id}"`;
+        
+        if (position) {
+            xml += ` x="${position.x}" y="${position.y}"`;
+        }
+        
+        xml += '>';
+        
+        // Add inputs as XML if any
+        if (inputs && Object.keys(inputs).length > 0) {
+            for (const [inputName, inputValue] of Object.entries(inputs)) {
+                if (inputValue.type === 'text' || inputValue.type === 'number') {
+                    xml += `<field name="${inputName}">${inputValue.value}</field>`;
+                }
+            }
+        }
+        
+        xml += '</block>';
+        
+        log.info('Generated block XML:', xml);
+        return xml;
+    }
+    
+    /**
+     * Refresh the workspace to update the visual representation
+     * Uses proper VM refresh mechanisms and forces a complete workspace update
+     * @private
+     */
+    _refreshWorkspace() {
+        try {
+            log.info('Refreshing workspace after block operation');
+            
+            // Strategy 1: Force complete workspace reload by setting editing target
+            if (this.vm.runtime && this.vm.runtime.setEditingTarget && this.vm.editingTarget) {
+                const currentTarget = this.vm.editingTarget;
+                this.vm.runtime.setEditingTarget(currentTarget);
+                log.info('Forced editing target refresh');
+            }
+            
+            // Strategy 2: Use the official VM refreshWorkspace method
+            if (this.vm.refreshWorkspace && typeof this.vm.refreshWorkspace === 'function') {
+                this.vm.refreshWorkspace();
+                log.info('Workspace refreshed using vm.refreshWorkspace()');
+            }
+            // Strategy 3: Manually trigger workspace update events
+            else if (this.vm.emitWorkspaceUpdate && typeof this.vm.emitWorkspaceUpdate === 'function') {
+                this.vm.emitWorkspaceUpdate();
+                log.info('Workspace refreshed using vm.emitWorkspaceUpdate()');
+                
+                // Also trigger targets update to ensure GUI is notified
+                if (this.vm.emitTargetsUpdate && typeof this.vm.emitTargetsUpdate === 'function') {
+                    this.vm.emitTargetsUpdate(false);
+                    log.info('Targets update emitted');
+                }
+            }
+            // Strategy 4: Direct event emission
+            else if (this.vm.emit && typeof this.vm.emit === 'function') {
+                this.vm.emit('workspaceUpdate');
+                this.vm.emit('targetsUpdate');
+                log.info('Workspace refreshed using direct event emission');
+            }
+            else {
+                log.warn('No workspace refresh method available on VM');
+            }
+        } catch (error) {
+            log.error('Error refreshing workspace:', error);
+        }
     }
 }
 

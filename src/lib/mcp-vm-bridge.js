@@ -79,30 +79,44 @@ class MCPVMBridge {
             // 尝试创建块
             let blockId;
             try {
-                // Create the block using the target's blocks object
-                blockId = target.blocks.createBlock({
-                    id: customBlockId, // 提供预生成的ID而不是null
+                // First try event-based creation for better integration
+                blockId = this._createBlockWithEvent(target, {
+                    id: customBlockId,
                     opcode,
-                    fields: {},
                     inputs: formattedInputs,
-                    topLevel: true,
-                    parent: null,
-                    shadow: false,
-                    x: position.x,
-                    y: position.y
+                    position
                 });
+                log.info(`Successfully created block via event: ${blockId}`);
+            } catch (eventError) {
+                log.warn('Event-based block creation failed, trying direct creation:', eventError);
                 
-                // 如果VM返回不同的ID，则使用VM返回的ID
-                if (blockId && blockId !== customBlockId) {
-                    log.info(`VM已使用ID ${blockId} 替代预生成ID ${customBlockId}`);
-                } else if (!blockId) {
-                    // 如果VM未返回ID，则使用我们预生成的ID
-                    blockId = customBlockId;
-                    log.info(`VM未返回块ID，使用预生成ID ${blockId}`);
+                // Fallback to direct block creation
+                try {
+                    // Create the block using the target's blocks object
+                    blockId = target.blocks.createBlock({
+                        id: customBlockId,
+                        opcode,
+                        fields: {},
+                        inputs: formattedInputs,
+                        topLevel: true,
+                        parent: null,
+                        shadow: false,
+                        x: position.x,
+                        y: position.y
+                    });
+                    
+                    // 如果VM返回不同的ID，则使用VM返回的ID
+                    if (blockId && blockId !== customBlockId) {
+                        log.info(`VM已使用ID ${blockId} 替代预生成ID ${customBlockId}`);
+                    } else if (!blockId) {
+                        // 如果VM未返回ID，则使用我们预生成的ID
+                        blockId = customBlockId;
+                        log.info(`VM未返回块ID，使用预生成ID ${blockId}`);
+                    }
+                } catch (blockError) {
+                    log.error(`Error in blocks.createBlock:`, blockError);
+                    throw new Error(`创建块失败: ${blockError.message}`);
                 }
-            } catch (blockError) {
-                log.error(`Error in blocks.createBlock:`, blockError);
-                throw new Error(`创建块失败: ${blockError.message}`);
             }
             
             // 确保块ID是有效的字符串
@@ -154,6 +168,11 @@ class MCPVMBridge {
                 log.info(`成功创建并检索到块 ${blockId} (${opcode})`);
             }
             
+            // Notify GUI to refresh workspace after block creation
+            setTimeout(() => {
+                this._refreshWorkspace();
+            }, 10); // Small delay to ensure event processing is complete
+            
             return blockId;
         } catch (error) {
             log.error('Error in createBlock:', error);
@@ -173,6 +192,12 @@ class MCPVMBridge {
                 return false;
             }
             this.vm.editingTarget.blocks.deleteBlock(blockId);
+            
+            // Notify GUI to refresh workspace after block deletion
+            setTimeout(() => {
+                this._refreshWorkspace();
+            }, 10);
+            
             return true;
         } catch (error) {
             log.error('Error deleting block:', error);
@@ -322,10 +347,8 @@ class MCPVMBridge {
                 // 尝试使用刷新策略
                 try {
                     // 通知VM块已更改，可能触发块缓存刷新
-                    if (this.vm.emitWorkspaceUpdate) {
-                        this.vm.emitWorkspaceUpdate();
-                        log.info(`已触发工作区更新`);
-                    }
+                    this._refreshWorkspace();
+                    log.info(`已触发工作区更新`);
                 } catch (refreshError) {
                     log.error(`触发工作区更新失败:`, refreshError);
                 }
@@ -337,6 +360,12 @@ class MCPVMBridge {
             }
             
             log.info(`成功连接块 ${child} 到 ${parent} 在输入 ${inputName}`);
+            
+            // Notify GUI to refresh workspace after connecting blocks
+            setTimeout(() => {
+                this._refreshWorkspace();
+            }, 10);
+            
             return true;
         } catch (error) {
             log.error('Error connecting blocks:', error);
@@ -565,6 +594,124 @@ class MCPVMBridge {
             isRunning: this.vm.runtime.isRunning,
             activeThreads: this.vm.runtime.threads.filter(thread => thread.isRunning()).length
         };
+    }
+
+    /**
+     * Create a block using Blockly event simulation for better GUI integration
+     * @private
+     * @param {Object} target - The target sprite
+     * @param {Object} blockSpec - Block specification
+     * @returns {string} Block ID
+     */
+    _createBlockWithEvent(target, blockSpec) {
+        if (!target || !target.blocks) {
+            throw new Error('Invalid target for block creation');
+        }
+        
+        const { id, opcode, inputs, position } = blockSpec;
+        
+        // Create a Blockly-style create event
+        const createEvent = {
+            type: 'create',
+            blockId: id,
+            xml: this._generateBlockXML(blockSpec),
+            workspaceId: target.id,
+            recordUndo: true
+        };
+        
+        log.info('VM Bridge: Simulating Blockly create event:', createEvent);
+        
+        // Use the VM's block listener to process the event (if available)
+        if (this.vm.blockListener && typeof this.vm.blockListener === 'function') {
+            this.vm.blockListener(createEvent);
+            log.info('VM Bridge: Block created via VM blockListener');
+        } else if (target.blocks.blocklyListen && typeof target.blocks.blocklyListen === 'function') {
+            // Fallback: use target's blocklyListen method directly
+            target.blocks.blocklyListen(createEvent);
+            log.info('VM Bridge: Block created via target blocklyListen');
+        } else {
+            throw new Error('No blocklyListen method available for event-based creation');
+        }
+        
+        return id;
+    }
+    
+    /**
+     * Generate XML for a block specification
+     * @private
+     * @param {Object} blockSpec - Block specification
+     * @returns {string} XML representation
+     */
+    _generateBlockXML(blockSpec) {
+        const { id, opcode, inputs, position } = blockSpec;
+        
+        let xml = `<block type="${opcode}" id="${id}"`;
+        
+        if (position) {
+            xml += ` x="${position.x}" y="${position.y}"`;
+        }
+        
+        xml += '>';
+        
+        // Add inputs as XML if any
+        if (inputs && Object.keys(inputs).length > 0) {
+            for (const [inputName, inputValue] of Object.entries(inputs)) {
+                if (inputValue && inputValue.value !== undefined) {
+                    xml += `<field name="${inputName}">${inputValue.value}</field>`;
+                }
+            }
+        }
+        
+        xml += '</block>';
+        
+        log.info('VM Bridge: Generated block XML:', xml);
+        return xml;
+    }
+    
+    /**
+     * Refresh the workspace to update the visual representation
+     * Uses multiple strategies to ensure GUI updates properly
+     * @private
+     */
+    _refreshWorkspace() {
+        try {
+            log.info('VM Bridge: Refreshing workspace after block operation');
+            
+            // Strategy 1: Force complete workspace reload by setting editing target
+            if (this.vm.runtime && this.vm.runtime.setEditingTarget && this.vm.editingTarget) {
+                const currentTarget = this.vm.editingTarget;
+                this.vm.runtime.setEditingTarget(currentTarget);
+                log.info('VM Bridge: Forced editing target refresh');
+            }
+            
+            // Strategy 2: Use the official VM refreshWorkspace method
+            if (this.vm.refreshWorkspace && typeof this.vm.refreshWorkspace === 'function') {
+                this.vm.refreshWorkspace();
+                log.info('VM Bridge: Workspace refreshed using vm.refreshWorkspace()');
+            }
+            // Strategy 3: Manually trigger workspace update events
+            else if (this.vm.emitWorkspaceUpdate && typeof this.vm.emitWorkspaceUpdate === 'function') {
+                this.vm.emitWorkspaceUpdate();
+                log.info('VM Bridge: Workspace refreshed using vm.emitWorkspaceUpdate()');
+                
+                // Also trigger targets update to ensure GUI is notified
+                if (this.vm.emitTargetsUpdate && typeof this.vm.emitTargetsUpdate === 'function') {
+                    this.vm.emitTargetsUpdate(false);
+                    log.info('VM Bridge: Targets update emitted');
+                }
+            }
+            // Strategy 4: Direct event emission
+            else if (this.vm.emit && typeof this.vm.emit === 'function') {
+                this.vm.emit('workspaceUpdate');
+                this.vm.emit('targetsUpdate');
+                log.info('VM Bridge: Workspace refreshed using direct event emission');
+            }
+            else {
+                log.warn('VM Bridge: No workspace refresh method available on VM');
+            }
+        } catch (error) {
+            log.error('VM Bridge: Error refreshing workspace:', error);
+        }
     }
 }
 

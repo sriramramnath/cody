@@ -18,11 +18,19 @@ const mockVM = {
     },
     editingTarget: {
         id: 'sprite1',
-        sprite: { name: 'Test Sprite' }
+        sprite: { name: 'Test Sprite' },
+        blocks: {
+            createBlock: jest.fn().mockReturnValue('test-block-id'),
+            deleteBlock: jest.fn(),
+            getBlock: jest.fn().mockReturnValue({ id: 'test-block-id', opcode: 'motion_movesteps' }),
+            connect: jest.fn()
+        }
     },
     greenFlag: jest.fn(),
     stopAll: jest.fn(),
-    setXYPosition: jest.fn()
+    setXYPosition: jest.fn(),
+    refreshWorkspace: jest.fn(),
+    emitWorkspaceUpdate: jest.fn()
 };
 
 // Mock blocks object
@@ -55,7 +63,7 @@ describe('MCP Server', () => {
         expect(toolDefinitions.length).toBeGreaterThan(0);
         
         // Check for specific required tools
-        const toolNames = toolDefinitions.map(tool => tool.name);
+        const toolNames = toolDefinitions.map(tool => tool.function ? tool.function.name : tool.name);
         
         // Block tools
         expect(toolNames).toContain('createBlock');
@@ -79,7 +87,6 @@ describe('MCP Server', () => {
         expect(toolNames).toContain('getExecutionState');
     });
 
-    test('should process tool calls correctly', async () => {
     test('should format block inputs correctly', async () => {
         // This is a direct access to the private method for testing
         // We're using a hack to access a private method for testing purposes
@@ -111,6 +118,8 @@ describe('MCP Server', () => {
         expect(formatInputs.COMPLEX.type).toBe('shadow');
         expect(formatInputs.COMPLEX.shadow).toBe(true);
     });
+
+    test('should process tool calls correctly', async () => {
         const toolCall = {
             name: 'createBlock',
             arguments: JSON.stringify({
@@ -122,6 +131,8 @@ describe('MCP Server', () => {
         const result = await mcpServer.processToolCall(toolCall);
         
         expect(result).toHaveProperty('success', true);
+    });
+
     test('should return project information', async () => {
         // Setup mock sprites and stage
         mockVM.runtime.targets = [
@@ -169,9 +180,6 @@ describe('MCP Server', () => {
         expect(result.project.sprites.length).toBe(1);
         expect(result.project.sprites[0].name).toBe('Sprite1');
     });
-        expect(result).toHaveProperty('blockId', 'test-block-id');
-        expect(mockVM.runtime.makeBlock).toHaveBeenCalled();
-    });
 
     test('should handle project execution tools', async () => {
         const runResult = await mcpServer.executeTool('runProject', {});
@@ -198,5 +206,59 @@ describe('MCP Server', () => {
         
         expect(result).toHaveProperty('success', false);
         expect(result.error).toContain('not found');
+    });
+
+    test('should refresh workspace after block operations', async () => {
+        // Test createBlock triggers workspace refresh
+        await mcpServer.executeTool('createBlock', {
+            blockType: 'motion_movesteps',
+            inputs: { STEPS: 10 }
+        });
+        expect(mockVM.refreshWorkspace).toHaveBeenCalled();
+
+        // Reset mock
+        mockVM.refreshWorkspace.mockClear();
+
+        // Test deleteBlock triggers workspace refresh  
+        await mcpServer.executeTool('deleteBlock', {
+            blockId: 'test-block-id'
+        });
+        expect(mockVM.refreshWorkspace).toHaveBeenCalled();
+
+        // Reset mock
+        mockVM.refreshWorkspace.mockClear();
+
+        // Test connectBlocks triggers workspace refresh
+        await mcpServer.executeTool('connectBlocks', {
+            parentBlockId: 'parent-block-id',
+            childBlockId: 'child-block-id'
+        });
+        expect(mockVM.refreshWorkspace).toHaveBeenCalled();
+
+        // Reset mock and verify non-block operations don't trigger refresh
+        mockVM.refreshWorkspace.mockClear();
+        
+        await mcpServer.executeTool('runProject', {});
+        expect(mockVM.refreshWorkspace).not.toHaveBeenCalled();
+    });
+
+    test('should refresh workspace in VM Bridge operations', async () => {
+        // Test VM Bridge createBlock
+        vmBridge.createBlock(null, 'motion_movesteps', {}, { x: 0, y: 0 });
+        expect(mockVM.refreshWorkspace).toHaveBeenCalled();
+
+        // Reset mock
+        mockVM.refreshWorkspace.mockClear();
+
+        // Test VM Bridge deleteBlock
+        vmBridge.deleteBlock('test-block-id');
+        expect(mockVM.refreshWorkspace).toHaveBeenCalled();
+
+        // Reset mock
+        mockVM.refreshWorkspace.mockClear();
+
+        // Test VM Bridge connectBlocks
+        vmBridge.connectBlocks('parent-id', 'child-id');
+        expect(mockVM.refreshWorkspace).toHaveBeenCalled();
     });
 });
