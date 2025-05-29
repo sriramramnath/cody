@@ -1100,7 +1100,7 @@ ${options.toolSummary.visualToolsUsed > 2 ? '👍 很棒！继续使用工具让
             const isStreamEnabled = !!options.onStream;
             
             // 设置超时控制
-            const timeoutDuration = 90000; // 90秒超时
+            const timeoutDuration = 60000*10; // 90秒超时
             let timeoutId;
             const timeoutPromise = new Promise((_, reject) => {
                 timeoutId = setTimeout(() => reject(new Error('请求超时，API响应时间过长')), timeoutDuration);
