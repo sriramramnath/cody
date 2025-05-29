@@ -11,11 +11,11 @@ const BING_SEARCH_ENDPOINT = 'https://api.bing.microsoft.com/v7.0/search';
 /**
  * 执行 Bing 搜索查询
  * @param {string} query - 搜索查询字符串
- * @param {Object} options - 搜索选项
+ * @param {object} options - 搜索选项
  * @param {number} options.count - 返回的结果数量 (默认: 5, 最大: 50)
  * @param {string} options.market - 市场代码 (默认: 'zh-CN')
  * @param {string} options.safeSearch - 安全搜索设置 ('Off', 'Moderate', 'Strict', 默认: 'Moderate')
- * @returns {Promise<Object>} 搜索结果对象
+ * @returns {Promise<object>} 搜索结果对象
  */
 const search = async (query, options = {}) => {
     try {
@@ -67,10 +67,10 @@ const search = async (query, options = {}) => {
 
 /**
  * 处理搜索结果，提取和格式化有用信息
- * @param {Object} rawResults - 原始 API 响应数据
- * @returns {Object} 处理后的搜索结果
+ * @param {object} rawResults - 原始 API 响应数据
+ * @returns {object} 处理后的搜索结果
  */
-const processSearchResults = (rawResults) => {
+const processSearchResults = rawResults => {
     try {
         if (!rawResults.webPages || !rawResults.webPages.value) {
             return {
@@ -110,8 +110,8 @@ const processSearchResults = (rawResults) => {
 /**
  * 搜索并总结结果，提供适合儿童的内容
  * @param {string} query - 搜索查询
- * @param {Object} options - 搜索选项
- * @returns {Promise<Object>} 搜索结果，针对儿童友好的格式
+ * @param {object} options - 搜索选项
+ * @returns {Promise<object>} 搜索结果，针对儿童友好的格式
  */
 const searchForChildren = async (query, options = {}) => {
     try {

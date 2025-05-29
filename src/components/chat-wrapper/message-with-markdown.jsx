@@ -1,8 +1,8 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import ReactMarkdown from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter';
+import {atomDark} from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 import styles from './markdown-styles.css';
 
@@ -11,7 +11,7 @@ import styles from './markdown-styles.css';
  * @param {string} content - Markdown格式的文本内容
  * @returns {React.Component} 渲染后的Markdown组件
  */
-const MessageWithMarkdown = ({ content }) => {
+const MessageWithMarkdown = ({content}) => {
     const [copied, setCopied] = React.useState(false);
     
     // 如果是空内容，返回null
@@ -22,14 +22,17 @@ const MessageWithMarkdown = ({ content }) => {
             <ReactMarkdown
                 components={{
                     // 自定义代码块渲染，使用SyntaxHighlighter
-                    code({ node, inline, className, children, ...props }) {
+                    code ({node, inline, className, children, ...props}) {
                         const match = /language-(\w+)/.exec(className || '');
                         const language = match ? match[1] : 'text';
                         
                         // 内联代码使用简单样式
                         if (inline) {
                             return (
-                                <code className={styles.inlineCode} {...props}>
+                                <code
+                                    className={styles.inlineCode}
+                                    {...props}
+                                >
                                     {children}
                                 </code>
                             );
@@ -55,7 +58,12 @@ const MessageWithMarkdown = ({ content }) => {
                                             '已复制!'
                                         ) : (
                                             <>
-                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                                                <svg
+                                                    width="10"
+                                                    height="10"
+                                                    viewBox="0 0 24 24"
+                                                    fill="currentColor"
+                                                >
                                                     <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
                                                 </svg>
                                                 复制
@@ -68,9 +76,9 @@ const MessageWithMarkdown = ({ content }) => {
                                     language={language}
                                     PreTag="div"
                                     // 当语言不支持时尝试自动检测
-                                    useInlineStyles={true}
-                                    wrapLines={true}
-                                    wrapLongLines={true}
+                                    useInlineStyles
+                                    wrapLines
+                                    wrapLongLines
                                     customStyle={{
                                         margin: 0,
                                         borderBottomLeftRadius: '6px',
@@ -85,8 +93,12 @@ const MessageWithMarkdown = ({ content }) => {
                         );
                     },
                     // 自定义链接渲染，添加target="_blank"
-                    a({ node, ...props }) {
-                        return <a target="_blank" rel="noopener noreferrer" {...props} />;
+                    a ({node, ...props}) {
+                        return (<a
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            {...props}
+                        />);
                     }
                 }}
             >

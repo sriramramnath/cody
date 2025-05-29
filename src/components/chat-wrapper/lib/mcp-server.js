@@ -4,14 +4,14 @@
  * through function calls.
  */
 
-import log from './log.js';
+import log from '../../../lib/log.js';
 
 class MCPServer {
     /**
      * Creates a new MCP Server instance
-     * @param {Object} vm - The Scratch virtual machine instance
-     * @param {Object} blocks - The ScratchBlocks instance (optional)
-     * @param {Object} props - Additional properties and components
+     * @param {object} vm - The Scratch virtual machine instance
+     * @param {object} blocks - The ScratchBlocks instance (optional)
+     * @param {object} props - Additional properties and components
      */
     constructor (vm, blocks, props = {}) {
         this.vm = vm;
@@ -35,7 +35,7 @@ class MCPServer {
      * Initialize block manipulation tools
      * @private
      */
-    _initBlockTools() {
+    _initBlockTools () {
         // Block creation and manipulation
         this.registerTool('createBlock', {
             description: 'Creates a new block in the current sprite',
@@ -57,13 +57,13 @@ class MCPServer {
                 },
                 required: ['blockType']
             },
-            handler: async (params) => {
+            handler: async params => {
                 try {
                     if (!this.vm.editingTarget) {
-                        return { success: false, error: 'No active sprite selected' };
+                        return {success: false, error: 'No active sprite selected'};
                     }
 
-                    const { blockType, inputs = {}, position = { x: 0, y: 0 } } = params;
+                    const {blockType, inputs = {}, position = {x: 0, y: 0}} = params;
                     
                     let blockId;
                     try {
@@ -118,8 +118,8 @@ class MCPServer {
                         }
                         
                         // Double check block exists in the workspace
-                        const blockExists = this.vmBridge ? 
-                            this.vmBridge.getBlock(blockId) : 
+                        const blockExists = this.vmBridge ?
+                            this.vmBridge.getBlock(blockId) :
                             this.vm.editingTarget.blocks.getBlock(blockId);
                             
                         if (!blockExists) {
@@ -131,8 +131,8 @@ class MCPServer {
                             success: false,
                             error: `Failed to create block: ${createError.message}`
                         };
-                    }                    // 返回清晰的成功信息和块 ID
-                    return { 
+                    } // 返回清晰的成功信息和块 ID
+                    return {
                         success: true,
                         blockId,
                         opcode: blockType,
@@ -160,31 +160,31 @@ class MCPServer {
                 },
                 required: ['blockId']
             },
-            handler: async (params) => {
+            handler: async params => {
                 try {
-                    const { blockId } = params;
+                    const {blockId} = params;
                     
                     if (!this.vm.editingTarget) {
-                        return { success: false, error: 'No active sprite selected' };
+                        return {success: false, error: 'No active sprite selected'};
                     }
                     
                     if (this.vmBridge) {
                         const success = this.vmBridge.deleteBlock(blockId);
                         if (!success) {
-                            return { success: false, error: `Failed to delete block ${blockId}` };
+                            return {success: false, error: `Failed to delete block ${blockId}`};
                         }
                     } else {
                         this.vm.editingTarget.blocks.deleteBlock(blockId);
                     }
                     
-                    return { 
+                    return {
                         success: true,
-                        message: `Block ${blockId} deleted successfully` 
+                        message: `Block ${blockId} deleted successfully`
                     };
                 } catch (error) {
-                    return { 
-                        success: false, 
-                        error: `Failed to delete block: ${error.message}` 
+                    return {
+                        success: false,
+                        error: `Failed to delete block: ${error.message}`
                     };
                 }
             }
@@ -215,12 +215,12 @@ class MCPServer {
                 },
                 required: ['parentBlockId', 'childBlockId']
             },
-            handler: async (params) => {
+            handler: async params => {
                 try {
-                    const { parentBlockId, childBlockId, inputName, connectionType = 'next' } = params;
+                    const {parentBlockId, childBlockId, inputName, connectionType = 'next'} = params;
                     
                     if (!this.vm.editingTarget) {
-                        return { success: false, error: 'No active sprite selected' };
+                        return {success: false, error: 'No active sprite selected'};
                     }
 
                     // 确保块ID是字符串
@@ -233,30 +233,30 @@ class MCPServer {
                     const childBlock = blocks.getBlock(childId);
 
                     if (!parentBlock) {
-                        return { success: false, error: `Parent block ${parentId} not found` };
+                        return {success: false, error: `Parent block ${parentId} not found`};
                     }
                     
                     if (!childBlock) {
-                        return { success: false, error: `Child block ${childId} not found` };
+                        return {success: false, error: `Child block ${childId} not found`};
                     }
 
                     // 确定正确的连接输入
-                    const actualInputName = connectionType === 'input' ? 
+                    const actualInputName = connectionType === 'input' ?
                         (inputName || 'next') : 'next';
                     
                     try {
                         // Use VMBridge if available
                         if (this.vmBridge) {
                             const connected = this.vmBridge.connectBlocks(
-                                parentId, 
-                                childId, 
+                                parentId,
+                                childId,
                                 actualInputName
                             );
                             
                             if (!connected) {
-                                return { 
-                                    success: false, 
-                                    error: `Failed to connect blocks. Connection failed with VMBridge.` 
+                                return {
+                                    success: false,
+                                    error: `Failed to connect blocks. Connection failed with VMBridge.`
                                 };
                             }
                         } else {
@@ -267,9 +267,9 @@ class MCPServer {
                         // 验证连接是否成功
                         const updatedParent = blocks.getBlock(parentId);
                         if (connectionType === 'next' && (!updatedParent.next || updatedParent.next !== childId)) {
-                            return { 
-                                success: false, 
-                                error: `连接似乎已执行，但块未正确链接。请检查块类型是否兼容。` 
+                            return {
+                                success: false,
+                                error: `连接似乎已执行，但块未正确链接。请检查块类型是否兼容。`
                             };
                         }
                         
@@ -284,20 +284,20 @@ class MCPServer {
                         };
                         
                     } catch (connectionError) {
-                        return { 
-                            success: false, 
-                            error: `Connection error: ${connectionError.message}` 
+                        return {
+                            success: false,
+                            error: `Connection error: ${connectionError.message}`
                         };
                     }
                     
-                    return { 
+                    return {
                         success: true,
                         message: `Connected block ${childBlockId} to ${parentBlockId} (${connectionType})`
                     };
                 } catch (error) {
-                    return { 
+                    return {
                         success: false,
-                        error: `Failed to connect blocks: ${error.message}` 
+                        error: `Failed to connect blocks: ${error.message}`
                     };
                 }
             }
@@ -308,7 +308,7 @@ class MCPServer {
      * Initialize sprite manipulation tools
      * @private
      */
-    _initSpriteTools() {
+    _initSpriteTools () {
         this.registerTool('createSprite', {
             description: 'Creates a new sprite',
             parameters: {
@@ -341,9 +341,9 @@ class MCPServer {
                 },
                 required: []
             },
-            handler: async (params) => {
+            handler: async params => {
                 try {
-                    const { name, costume, libraryItem, x, y, size } = params;
+                    const {name, costume, libraryItem, x, y, size} = params;
                     let sprite = null;
                     
                     // Create sprite using the appropriate method
@@ -351,7 +351,7 @@ class MCPServer {
                         // Create from library item if specified
                         try {
                             if (this.props.assetLibrary && this.props.assetLibrary.sprites) {
-                                const item = this.props.assetLibrary.sprites.find(s => 
+                                const item = this.props.assetLibrary.sprites.find(s =>
                                     s.id === libraryItem || s.name === libraryItem
                                 );
                                 
@@ -391,7 +391,7 @@ class MCPServer {
                         if (costume && !libraryItem) {
                             try {
                                 if (this.props.assetLibrary && this.props.assetLibrary.costumes) {
-                                    const costumeAsset = this.props.assetLibrary.costumes.find(c => 
+                                    const costumeAsset = this.props.assetLibrary.costumes.find(c =>
                                         c.name === costume
                                     );
                                     
@@ -433,23 +433,23 @@ class MCPServer {
                             direction: target.direction,
                             currentCostume: target.currentCostume,
                             costumeCount: target.sprite.costumes.length
-                        } : { id: sprite.id };
+                        } : {id: sprite.id};
                         
-                        return { 
+                        return {
                             success: true,
                             sprite: spriteInfo,
                             message: `Created sprite "${spriteInfo.name}" with ID ${spriteInfo.id}`
                         };
-                    } else {
-                        return {
-                            success: false,
-                            error: 'Failed to create sprite'
-                        };
                     }
-                } catch (error) {
-                    return { 
+                    return {
                         success: false,
-                        error: `Failed to create sprite: ${error.message}` 
+                        error: 'Failed to create sprite'
+                    };
+                    
+                } catch (error) {
+                    return {
+                        success: false,
+                        error: `Failed to create sprite: ${error.message}`
                     };
                 }
             }
@@ -461,7 +461,7 @@ class MCPServer {
                 type: 'object',
                 properties: {
                     spriteId: {
-                        type: 'string', 
+                        type: 'string',
                         description: 'ID of the sprite to position (optional, uses current sprite if not provided)'
                     },
                     x: {
@@ -475,9 +475,9 @@ class MCPServer {
                 },
                 required: ['x', 'y']
             },
-            handler: async (params) => {
+            handler: async params => {
                 try {
-                    let { spriteId, x, y } = params;
+                    let {spriteId, x, y} = params;
                     
                     // Use current sprite if spriteId not provided
                     if (!spriteId && this.vm.editingTarget) {
@@ -485,20 +485,20 @@ class MCPServer {
                     }
                     
                     if (!spriteId) {
-                        return { success: false, error: 'No sprite specified or selected' };
+                        return {success: false, error: 'No sprite specified or selected'};
                     }
                     
                     // Set sprite position using VM
                     this.vm.setXYPosition(spriteId, x, y);
                     
-                    return { 
+                    return {
                         success: true,
-                        message: `Set sprite position to (${x}, ${y})` 
+                        message: `Set sprite position to (${x}, ${y})`
                     };
                 } catch (error) {
-                    return { 
+                    return {
                         success: false,
-                        error: `Failed to set sprite position: ${error.message}` 
+                        error: `Failed to set sprite position: ${error.message}`
                     };
                 }
             }
@@ -520,9 +520,9 @@ class MCPServer {
                 },
                 required: ['size']
             },
-            handler: async (params) => {
+            handler: async params => {
                 try {
-                    let { spriteId, size } = params;
+                    let {spriteId, size} = params;
                     
                     // Use current sprite if spriteId not provided
                     if (!spriteId && this.vm.editingTarget) {
@@ -530,20 +530,20 @@ class MCPServer {
                     }
                     
                     if (!spriteId) {
-                        return { success: false, error: 'No sprite specified or selected' };
+                        return {success: false, error: 'No sprite specified or selected'};
                     }
                     
                     // Set sprite size
-                    this.vm.postSpriteInfo({ size: size });
+                    this.vm.postSpriteInfo({size: size});
                     
-                    return { 
+                    return {
                         success: true,
-                        message: `Set sprite size to ${size}%` 
+                        message: `Set sprite size to ${size}%`
                     };
                 } catch (error) {
-                    return { 
+                    return {
                         success: false,
-                        error: `Failed to set sprite size: ${error.message}` 
+                        error: `Failed to set sprite size: ${error.message}`
                     };
                 }
             }
@@ -565,9 +565,9 @@ class MCPServer {
                 },
                 required: ['direction']
             },
-            handler: async (params) => {
+            handler: async params => {
                 try {
-                    let { spriteId, direction } = params;
+                    let {spriteId, direction} = params;
                     
                     // Use current sprite if spriteId not provided
                     if (!spriteId && this.vm.editingTarget) {
@@ -575,20 +575,20 @@ class MCPServer {
                     }
                     
                     if (!spriteId) {
-                        return { success: false, error: 'No sprite specified or selected' };
+                        return {success: false, error: 'No sprite specified or selected'};
                     }
                     
                     // Set sprite direction
-                    this.vm.postSpriteInfo({ direction: direction });
+                    this.vm.postSpriteInfo({direction: direction});
                     
-                    return { 
+                    return {
                         success: true,
-                        message: `Set sprite direction to ${direction} degrees` 
+                        message: `Set sprite direction to ${direction} degrees`
                     };
                 } catch (error) {
-                    return { 
+                    return {
                         success: false,
-                        error: `Failed to set sprite direction: ${error.message}` 
+                        error: `Failed to set sprite direction: ${error.message}`
                     };
                 }
             }
@@ -599,7 +599,7 @@ class MCPServer {
      * Initialize project management tools
      * @private
      */
-    _initProjectTools() {
+    _initProjectTools () {
         this.registerTool('loadProject', {
             description: 'Loads a Scratch project',
             parameters: {
@@ -616,14 +616,14 @@ class MCPServer {
                 },
                 required: []
             },
-            handler: async (params) => {
+            handler: async params => {
                 try {
-                    const { projectId, projectData } = params;
+                    const {projectId, projectData} = params;
                     
                     if (!projectId && !projectData) {
-                        return { 
-                            success: false, 
-                            error: 'Either projectId or projectData must be provided' 
+                        return {
+                            success: false,
+                            error: 'Either projectId or projectData must be provided'
                         };
                     }
                     
@@ -632,14 +632,14 @@ class MCPServer {
                         try {
                             const projectDataObj = JSON.parse(projectData);
                             await this.vm.loadProject(projectDataObj);
-                            return { 
+                            return {
                                 success: true,
-                                message: 'Project loaded from provided data' 
+                                message: 'Project loaded from provided data'
                             };
                         } catch (e) {
-                            return { 
-                                success: false, 
-                                error: `Invalid project data: ${e.message}` 
+                            return {
+                                success: false,
+                                error: `Invalid project data: ${e.message}`
                             };
                         }
                     }
@@ -649,26 +649,26 @@ class MCPServer {
                     if (this.props.onLoadProject && typeof this.props.onLoadProject === 'function') {
                         try {
                             await this.props.onLoadProject(projectId);
-                            return { 
+                            return {
                                 success: true,
-                                message: `Project ${projectId} loaded successfully` 
+                                message: `Project ${projectId} loaded successfully`
                             };
                         } catch (e) {
-                            return { 
-                                success: false, 
-                                error: `Failed to load project by ID: ${e.message}` 
+                            return {
+                                success: false,
+                                error: `Failed to load project by ID: ${e.message}`
                             };
                         }
                     } else {
-                        return { 
-                            success: false, 
-                            error: 'Project loading by ID not implemented in this environment' 
+                        return {
+                            success: false,
+                            error: 'Project loading by ID not implemented in this environment'
                         };
                     }
                 } catch (error) {
-                    return { 
+                    return {
                         success: false,
-                        error: `Failed to load project: ${error.message}` 
+                        error: `Failed to load project: ${error.message}`
                     };
                 }
             }
@@ -689,9 +689,9 @@ class MCPServer {
                     }
                 }
             },
-            handler: async (params) => {
+            handler: async params => {
                 try {
-                    const { name, asNew } = params;
+                    const {name, asNew} = params;
                     
                     // Get project data
                     const projectData = this.vm.saveProjectSb3();
@@ -705,30 +705,30 @@ class MCPServer {
                                 asNew: asNew || false
                             });
                             
-                            return { 
+                            return {
                                 success: true,
                                 message: `Project saved${name ? ` as "${name}"` : ''}`,
                                 projectInfo: savedProjectInfo
                             };
                         } catch (e) {
-                            return { 
-                                success: false, 
-                                error: `Failed to save project: ${e.message}` 
+                            return {
+                                success: false,
+                                error: `Failed to save project: ${e.message}`
                             };
                         }
                     }
                     
                     // If no save handler, just return the project data
-                    return { 
+                    return {
                         success: true,
                         message: `Project data generated${name ? ` for "${name}"` : ''}`,
                         // Don't return actual binary data in the response as it would be too large
                         dataAvailable: true
                     };
                 } catch (error) {
-                    return { 
+                    return {
                         success: false,
-                        error: `Failed to save project: ${error.message}` 
+                        error: `Failed to save project: ${error.message}`
                     };
                 }
             }
@@ -797,14 +797,14 @@ class MCPServer {
                         }
                     };
                     
-                    return { 
+                    return {
                         success: true,
                         project: projectInfo
                     };
                 } catch (error) {
-                    return { 
+                    return {
                         success: false,
-                        error: `Failed to get project info: ${error.message}` 
+                        error: `Failed to get project info: ${error.message}`
                     };
                 }
             }
@@ -815,7 +815,7 @@ class MCPServer {
      * Initialize execution control tools
      * @private
      */
-    _initExecutionTools() {
+    _initExecutionTools () {
         this.registerTool('runProject', {
             description: 'Runs the Scratch project',
             parameters: {
@@ -825,14 +825,14 @@ class MCPServer {
             handler: async () => {
                 try {
                     this.vm.greenFlag();
-                    return { 
+                    return {
                         success: true,
-                        message: 'Project started running' 
+                        message: 'Project started running'
                     };
                 } catch (error) {
-                    return { 
+                    return {
                         success: false,
-                        error: `Failed to run project: ${error.message}` 
+                        error: `Failed to run project: ${error.message}`
                     };
                 }
             }
@@ -847,14 +847,14 @@ class MCPServer {
             handler: async () => {
                 try {
                     this.vm.stopAll();
-                    return { 
+                    return {
                         success: true,
-                        message: 'Project execution stopped' 
+                        message: 'Project execution stopped'
                     };
                 } catch (error) {
-                    return { 
+                    return {
                         success: false,
-                        error: `Failed to stop project: ${error.message}` 
+                        error: `Failed to stop project: ${error.message}`
                     };
                 }
             }
@@ -871,7 +871,7 @@ class MCPServer {
                     const isRunning = this.vm.runtime.isRunning;
                     const activeThreads = this.vm.runtime.threads.filter(thread => thread.isRunning()).length;
                     
-                    return { 
+                    return {
                         success: true,
                         state: {
                             isRunning,
@@ -879,9 +879,9 @@ class MCPServer {
                         }
                     };
                 } catch (error) {
-                    return { 
+                    return {
                         success: false,
-                        error: `Failed to get execution state: ${error.message}` 
+                        error: `Failed to get execution state: ${error.message}`
                     };
                 }
             }
@@ -890,11 +890,11 @@ class MCPServer {
 
     /**
      * Format block inputs into the structure expected by the VM
-     * @param {Object} inputs - Simple key-value pairs for inputs
-     * @returns {Object} - Formatted inputs for VM
+     * @param {object} inputs - Simple key-value pairs for inputs
+     * @returns {object} - Formatted inputs for VM
      * @private
      */
-    _formatBlockInputs(inputs) {
+    _formatBlockInputs (inputs) {
         const formattedInputs = {};
         
         Object.entries(inputs).forEach(([key, value]) => {
@@ -951,9 +951,9 @@ class MCPServer {
     /**
      * Register a new tool
      * @param {string} name - Name of the tool
-     * @param {Object} toolSpec - Tool specification including description, parameters, and handler
+     * @param {object} toolSpec - Tool specification including description, parameters, and handler
      */
-    registerTool(name, toolSpec) {
+    registerTool (name, toolSpec) {
         this.tools[name] = toolSpec;
         log.info(`Registered tool: ${name}`);
     }
@@ -962,7 +962,7 @@ class MCPServer {
      * Get all registered tools
      * @returns {Array} Array of tool definitions formatted for MCP
      */
-    getToolDefinitions() {
+    getToolDefinitions () {
         return Object.entries(this.tools).map(([name, tool]) => ({
             type: 'function',
             function: {
@@ -975,9 +975,9 @@ class MCPServer {
 
     /**
      * Get current Scratch context information including sprites, blocks, and project state
-     * @returns {Object} Current Scratch context with detailed information
+     * @returns {object} Current Scratch context with detailed information
      */
-    getScratchContext() {
+    getScratchContext () {
         try {
             const context = {
                 sprites: [],
@@ -1004,7 +1004,7 @@ class MCPServer {
                             layerOrder: target.layerOrder,
                             effects: target.effects,
                             currentCostume: target.currentCostume,
-                            currentCostumeName: target.sprite.costumes[target.currentCostume] ? 
+                            currentCostumeName: target.sprite.costumes[target.currentCostume] ?
                                 target.sprite.costumes[target.currentCostume].name : 'unknown',
                             costumes: target.sprite.costumes.map(c => ({
                                 name: c.name,
@@ -1074,27 +1074,27 @@ class MCPServer {
             
             // Get canvas state for visual context
             context.canvasState = {
-                isRunning: this.vm.runtime.isRunning, 
+                isRunning: this.vm.runtime.isRunning,
                 editorMode: this.vm.runtime.isRealtimeMode ? 'realtime' : 'normal',
                 visibleLayer: this.vm.runtime.renderer && this.vm.runtime.renderer._visibleDrawMode || 'default',
-                frameRate: this.vm.runtime && this.vm.runtime.frameLoop && 
-                    this.vm.runtime.frameLoop.framerate !== undefined && 
-                    typeof this.vm.runtime.frameLoop.framerate === 'number' ? 
+                frameRate: this.vm.runtime && this.vm.runtime.frameLoop &&
+                    this.vm.runtime.frameLoop.framerate !== undefined &&
+                    typeof this.vm.runtime.frameLoop.framerate === 'number' ?
                     Math.round(this.vm.runtime.frameLoop.framerate) : 30 // 使用默认值30如果framerate不可用
             };
             
             // Add execution information if project is running
             if (this.vm.runtime.isRunning) {
                 context.executionInfo = {
-                    activeThreads: (this.vm.runtime && Array.isArray(this.vm.runtime.threads)) ? 
-                        this.vm.runtime.threads.filter(thread => 
-                            thread && 
-                            typeof thread === 'object' && 
-                            typeof thread.isRunning === 'function' && 
+                    activeThreads: (this.vm.runtime && Array.isArray(this.vm.runtime.threads)) ?
+                        this.vm.runtime.threads.filter(thread =>
+                            thread &&
+                            typeof thread === 'object' &&
+                            typeof thread.isRunning === 'function' &&
                             thread.isRunning()
                         ).length : 0,
-                    isGreenFlagRunning: this.vm.runtime && 
-                                      this.vm.runtime._events && 
+                    isGreenFlagRunning: this.vm.runtime &&
+                                      this.vm.runtime._events &&
                                       this.vm.runtime._events.PROJECT_RUN_START
                 };
             }
@@ -1129,17 +1129,17 @@ class MCPServer {
     /**
      * Execute a tool by name with provided parameters
      * @param {string} toolName - Name of the tool to execute
-     * @param {Object} params - Parameters to pass to the tool
-     * @returns {Promise<Object>} Result of the tool execution
+     * @param {object} params - Parameters to pass to the tool
+     * @returns {Promise<object>} Result of the tool execution
      */
-    async executeTool(toolName, params) {
+    async executeTool (toolName, params) {
         try {
             const tool = this.tools[toolName];
             
             if (!tool) {
-                return { 
-                    success: false, 
-                    error: `Tool "${toolName}" not found` 
+                return {
+                    success: false,
+                    error: `Tool "${toolName}" not found`
                 };
             }
             
@@ -1158,21 +1158,21 @@ class MCPServer {
             return result;
         } catch (error) {
             log.error(`Error executing tool ${toolName}:`, error);
-            return { 
-                success: false, 
-                error: `Tool execution failed: ${error.message}` 
+            return {
+                success: false,
+                error: `Tool execution failed: ${error.message}`
             };
         }
     }
 
     /**
      * Process a tool call from the MCP protocol
-     * @param {Object} toolCall - Tool call object from DeepSeek
-     * @returns {Promise<Object>} Result of the tool execution
+     * @param {object} toolCall - Tool call object from DeepSeek
+     * @returns {Promise<object>} Result of the tool execution
      */
-    async processToolCall(toolCall) {
+    async processToolCall (toolCall) {
         try {
-            const { name, arguments: args } = toolCall;
+            const {name, arguments: args} = toolCall;
             
             log.info(`处理工具调用: ${name}`);
             
@@ -1182,16 +1182,16 @@ class MCPServer {
                 log.info(`工具参数:`, params);
             } catch (e) {
                 log.error(`参数解析错误:`, e);
-                return { success: false, error: `无效的工具参数: ${e.message}` };
+                return {success: false, error: `无效的工具参数: ${e.message}`};
             }
             
             // 执行前验证VM和工具的可用性
             if (!this.vm) {
-                return { success: false, error: `VM实例不可用` };
+                return {success: false, error: `VM实例不可用`};
             }
             
             if (!this.tools[name]) {
-                return { success: false, error: `未知工具: ${name}` };
+                return {success: false, error: `未知工具: ${name}`};
             }
             
             // 记录块创建/连接操作的详细信息
@@ -1209,8 +1209,8 @@ class MCPServer {
                 // 成功结果增加更多诊断信息
                 if (name === 'createBlock' && result.blockId) {
                     // 验证块是否实际存在
-                    const blockExists = this.vmBridge ? 
-                        this.vmBridge.getBlock(result.blockId) : 
+                    const blockExists = this.vmBridge ?
+                        this.vmBridge.getBlock(result.blockId) :
                         this.vm.editingTarget.blocks.getBlock(result.blockId);
                         
                     // 增加诊断信息
@@ -1233,8 +1233,8 @@ class MCPServer {
             return result;
         } catch (error) {
             log.error('处理工具调用时出错:', error);
-            return { 
-                success: false, 
+            return {
+                success: false,
                 error: `工具调用处理失败: ${error.message}`,
                 timestamp: Date.now(),
                 troubleshootingTips: this._getTroubleshootingTips('general', {}, error.message)
@@ -1246,11 +1246,11 @@ class MCPServer {
      * 获取特定工具错误的故障排除提示
      * @private
      * @param {string} toolName - 工具名称
-     * @param {Object} params - 工具参数
+     * @param {object} params - 工具参数
      * @param {string} errorMessage - 错误消息
      * @returns {Array} 故障排除提示列表
      */
-    _getTroubleshootingTips(toolName, params, errorMessage) {
+    _getTroubleshootingTips (toolName, params, errorMessage) {
         const tips = [];
         
         // 通用提示
@@ -1258,21 +1258,21 @@ class MCPServer {
         
         // 特定工具提示
         switch (toolName) {
-            case 'createBlock':
-                tips.push('确保提供的块类型(blockType)在Scratch中有效');
-                tips.push('检查输入参数是否符合块类型的要求');
-                break;
+        case 'createBlock':
+            tips.push('确保提供的块类型(blockType)在Scratch中有效');
+            tips.push('检查输入参数是否符合块类型的要求');
+            break;
                 
-            case 'connectBlocks':
-                tips.push('确保要连接的两个块ID都有效并且块已创建成功');
-                tips.push('验证父块和子块的类型是否兼容');
-                tips.push('连接前先使用getBlock检查块是否存在');
-                break;
+        case 'connectBlocks':
+            tips.push('确保要连接的两个块ID都有效并且块已创建成功');
+            tips.push('验证父块和子块的类型是否兼容');
+            tips.push('连接前先使用getBlock检查块是否存在');
+            break;
                 
-            case 'general':
-                tips.push('检查工具名称是否正确');
-                tips.push('检查工具参数是否完整且格式正确');
-                break;
+        case 'general':
+            tips.push('检查工具名称是否正确');
+            tips.push('检查工具参数是否完整且格式正确');
+            break;
         }
         
         // 基于错误消息的额外提示
@@ -1293,7 +1293,7 @@ class MCPServer {
      * @param {string} toolName - Name of the tool
      * @returns {boolean} True if the tool is block-related
      */
-    _isBlockRelatedTool(toolName) {
+    _isBlockRelatedTool (toolName) {
         const blockTools = ['createBlock', 'deleteBlock', 'connectBlocks'];
         return blockTools.includes(toolName);
     }
@@ -1302,11 +1302,11 @@ class MCPServer {
      * Create a block using proper Blockly event simulation
      * This simulates the events that would normally come from the Blockly UI
      * @private
-     * @param {Object} target - The target sprite
-     * @param {Object} blockSpec - Block specification
+     * @param {object} target - The target sprite
+     * @param {object} blockSpec - Block specification
      * @returns {string} Block ID
      */
-    _createBlockWithEvent(target, blockSpec) {
+    _createBlockWithEvent (target, blockSpec) {
         if (!target || !target.blocks) {
             throw new Error('Invalid target for block creation');
         }
@@ -1338,11 +1338,11 @@ class MCPServer {
     /**
      * Generate XML for a block specification
      * @private
-     * @param {Object} blockSpec - Block specification
+     * @param {object} blockSpec - Block specification
      * @returns {string} XML representation
      */
-    _generateBlockXML(blockSpec) {
-        const { id, opcode, inputs, position } = blockSpec;
+    _generateBlockXML (blockSpec) {
+        const {id, opcode, inputs, position} = blockSpec;
         
         let xml = `<block type="${opcode}" id="${id}"`;
         
@@ -1372,7 +1372,7 @@ class MCPServer {
      * Uses proper VM refresh mechanisms and forces a complete workspace update
      * @private
      */
-    _refreshWorkspace() {
+    _refreshWorkspace () {
         try {
             log.info('Refreshing workspace after block operation');
             
@@ -1404,8 +1404,7 @@ class MCPServer {
                 this.vm.emit('workspaceUpdate');
                 this.vm.emit('targetsUpdate');
                 log.info('Workspace refreshed using direct event emission');
-            }
-            else {
+            } else {
                 log.warn('No workspace refresh method available on VM');
             }
         } catch (error) {

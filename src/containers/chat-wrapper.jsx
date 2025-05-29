@@ -3,9 +3,9 @@ import React, {useEffect, useState} from 'react';
 import {connect} from 'react-redux';
 import VM from 'scratch-vm';
 import ChatWrapperComponent from '../components/chat-wrapper/chat-wrapper.jsx';
-import MCPServer from '../lib/mcp-server';
-import MCPVMBridge from '../lib/mcp-vm-bridge';
-import deepseekAPI from '../lib/deepseek-api';
+import MCPServer from '../components/chat-wrapper/lib/mcp-server';
+import MCPVMBridge from '../components/chat-wrapper/lib/mcp-vm-bridge';
+import deepseekAPI from '../components/chat-wrapper/lib/deepseek-api';
 
 const ChatWrapper = props => {
     const {vm} = props;
@@ -16,7 +16,7 @@ const ChatWrapper = props => {
         if (vm) {
             const vmBridge = new MCPVMBridge(vm);
             // 不再需要传递blocks，从MCP服务器直接获取blocks
-            const server = new MCPServer(vm, null, { vmBridge });
+            const server = new MCPServer(vm, null, {vmBridge});
             
             // Register the MCP server with the DeepSeek API
             deepseekAPI.setMCPServer(server);
@@ -27,10 +27,10 @@ const ChatWrapper = props => {
         }
     }, [vm]);
     
-    return <ChatWrapperComponent 
-        {...props} 
+    return (<ChatWrapperComponent
+        {...props}
         mcpServer={mcpServer}
-    />;
+    />);
 };
 
 ChatWrapper.propTypes = {

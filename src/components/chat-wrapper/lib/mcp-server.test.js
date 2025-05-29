@@ -3,8 +3,8 @@
  * Tests the MCP Server and its integration with DeepSeek API
  */
 
-import MCPServer from '../../src/lib/mcp-server';
-import MCPVMBridge from '../../src/lib/mcp-vm-bridge';
+import MCPServer from './mcp-server';
+import MCPVMBridge from './mcp-vm-bridge';
 
 // Mock VM for testing
 const mockVM = {
@@ -18,11 +18,11 @@ const mockVM = {
     },
     editingTarget: {
         id: 'sprite1',
-        sprite: { name: 'Test Sprite' },
+        sprite: {name: 'Test Sprite'},
         blocks: {
             createBlock: jest.fn().mockReturnValue('test-block-id'),
             deleteBlock: jest.fn(),
-            getBlock: jest.fn().mockReturnValue({ id: 'test-block-id', opcode: 'motion_movesteps' }),
+            getBlock: jest.fn().mockReturnValue({id: 'test-block-id', opcode: 'motion_movesteps'}),
             connect: jest.fn()
         }
     },
@@ -48,7 +48,7 @@ describe('MCP Server', () => {
     beforeEach(() => {
         // Create VM bridge and MCP server
         vmBridge = new MCPVMBridge(mockVM);
-        mcpServer = new MCPServer(mockVM, mockBlocks, { vmBridge });
+        mcpServer = new MCPServer(mockVM, mockBlocks, {vmBridge});
     });
 
     afterEach(() => {
@@ -63,7 +63,7 @@ describe('MCP Server', () => {
         expect(toolDefinitions.length).toBeGreaterThan(0);
         
         // Check for specific required tools
-        const toolNames = toolDefinitions.map(tool => tool.function ? tool.function.name : tool.name);
+        const toolNames = toolDefinitions.map(tool => (tool.function ? tool.function.name : tool.name));
         
         // Block tools
         expect(toolNames).toContain('createBlock');
@@ -92,11 +92,11 @@ describe('MCP Server', () => {
         // We're using a hack to access a private method for testing purposes
         const formatInputs = mcpServer._formatBlockInputs({
             NUMBER: 10,
-            TEXT: "Hello",
-            VARIABLE: "$myVar",
+            TEXT: 'Hello',
+            VARIABLE: '$myVar',
             BOOLEAN: true,
-            BLOCK: { blockId: "test-block-123", shadow: false },
-            COMPLEX: { shadow: true, value: { type: "field_dropdown", value: "option1" } }
+            BLOCK: {blockId: 'test-block-123', shadow: false},
+            COMPLEX: {shadow: true, value: {type: 'field_dropdown', value: 'option1'}}
         });
         
         // Check each formatted input type
@@ -124,7 +124,7 @@ describe('MCP Server', () => {
             name: 'createBlock',
             arguments: JSON.stringify({
                 blockType: 'motion_movesteps',
-                inputs: { STEPS: 10 }
+                inputs: {STEPS: 10}
             })
         };
 
@@ -148,8 +148,8 @@ describe('MCP Server', () => {
                 volume: 100,
                 sprite: {
                     name: 'Stage',
-                    costumes: [{ name: 'backdrop1', assetId: 'backdrop1-id' }],
-                    sounds: [{ name: 'pop', assetId: 'pop-id' }]
+                    costumes: [{name: 'backdrop1', assetId: 'backdrop1-id'}],
+                    sounds: [{name: 'pop', assetId: 'pop-id'}]
                 },
                 currentCostume: 0
             },
@@ -159,7 +159,7 @@ describe('MCP Server', () => {
                 id: 'sprite1',
                 sprite: {
                     name: 'Sprite1',
-                    costumes: [{ name: 'costume1', assetId: 'costume1-id' }],
+                    costumes: [{name: 'costume1', assetId: 'costume1-id'}],
                     sounds: []
                 },
                 visible: true,
@@ -212,14 +212,14 @@ describe('MCP Server', () => {
         // Test createBlock triggers workspace refresh
         await mcpServer.executeTool('createBlock', {
             blockType: 'motion_movesteps',
-            inputs: { STEPS: 10 }
+            inputs: {STEPS: 10}
         });
         expect(mockVM.refreshWorkspace).toHaveBeenCalled();
 
         // Reset mock
         mockVM.refreshWorkspace.mockClear();
 
-        // Test deleteBlock triggers workspace refresh  
+        // Test deleteBlock triggers workspace refresh
         await mcpServer.executeTool('deleteBlock', {
             blockId: 'test-block-id'
         });
@@ -244,7 +244,7 @@ describe('MCP Server', () => {
 
     test('should refresh workspace in VM Bridge operations', async () => {
         // Test VM Bridge createBlock
-        vmBridge.createBlock(null, 'motion_movesteps', {}, { x: 0, y: 0 });
+        vmBridge.createBlock(null, 'motion_movesteps', {}, {x: 0, y: 0});
         expect(mockVM.refreshWorkspace).toHaveBeenCalled();
 
         // Reset mock

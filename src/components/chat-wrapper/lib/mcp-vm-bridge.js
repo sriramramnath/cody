@@ -3,12 +3,12 @@
  * A bridge between MCP Server and Scratch VM for executing operations
  */
 
-import log from './log.js';
+import log from '../../../lib/log.js';
 
 class MCPVMBridge {
     /**
      * Creates a bridge between MCP Server and Scratch VM
-     * @param {Object} vm - The Scratch VM instance
+     * @param {object} vm - The Scratch VM instance
      */
     constructor (vm) {
         this.vm = vm;
@@ -17,18 +17,18 @@ class MCPVMBridge {
 
     /**
      * Get current editingTarget (current sprite)
-     * @returns {Object|null} The current sprite target
+     * @returns {object|null} The current sprite target
      */
-    getCurrentTarget() {
+    getCurrentTarget () {
         return this.vm.editingTarget;
     }
 
     /**
      * Get sprite by ID or name
      * @param {string} spriteIdOrName - The ID or name of the sprite
-     * @returns {Object|null} The sprite target
+     * @returns {object|null} The sprite target
      */
-    getSprite(spriteIdOrName) {
+    getSprite (spriteIdOrName) {
         if (!spriteIdOrName) return this.vm.editingTarget;
 
         // Try to find by ID first
@@ -36,7 +36,7 @@ class MCPVMBridge {
         
         // If not found, try by name
         if (!target) {
-            target = this.vm.runtime.targets.find(t => 
+            target = this.vm.runtime.targets.find(t =>
                 t.sprite && t.sprite.name === spriteIdOrName
             );
         }
@@ -48,11 +48,11 @@ class MCPVMBridge {
      * Create a new block in the specified sprite
      * @param {string} spriteId - ID of the sprite (optional, uses current sprite if not provided)
      * @param {string} opcode - Block opcode
-     * @param {Object} inputs - Block inputs
-     * @param {Object} position - X,Y position for the block
+     * @param {object} inputs - Block inputs
+     * @param {object} position - X,Y position for the block
      * @returns {string} ID of the created block
      */
-    createBlock(spriteId, opcode, inputs = {}, position = { x: 0, y: 0 }) {
+    createBlock (spriteId, opcode, inputs = {}, position = {x: 0, y: 0}) {
         try {
             const target = spriteId ? this.getSprite(spriteId) : this.getCurrentTarget();
             
@@ -185,7 +185,7 @@ class MCPVMBridge {
      * @param {string} blockId - ID of the block to delete
      * @returns {boolean} Success status
      */
-    deleteBlock(blockId) {
+    deleteBlock (blockId) {
         try {
             if (!this.vm.editingTarget || !this.vm.editingTarget.blocks) {
                 log.error('Cannot delete block: No active editing target');
@@ -208,11 +208,11 @@ class MCPVMBridge {
     /**
      * Update block inputs or fields
      * @param {string} blockId - ID of the block to update
-     * @param {Object} inputs - New input values
-     * @param {Object} fields - New field values
+     * @param {object} inputs - New input values
+     * @param {object} fields - New field values
      * @returns {boolean} Success status
      */
-    updateBlock(blockId, inputs = {}, fields = {}) {
+    updateBlock (blockId, inputs = {}, fields = {}) {
         try {
             if (!this.vm.editingTarget || !this.vm.editingTarget.blocks) {
                 log.error('Cannot update block: No active editing target');
@@ -237,7 +237,7 @@ class MCPVMBridge {
      * @param {string} inputName - Name of the input to connect to (for C-shaped blocks) or "next"
      * @returns {boolean} Success status
      */
-    connectBlocks(parentId, childId, inputName = 'next') {
+    connectBlocks (parentId, childId, inputName = 'next') {
         try {
             if (!this.vm.editingTarget || !this.vm.editingTarget.blocks) {
                 log.error('Cannot connect blocks: No active editing target');
@@ -334,9 +334,9 @@ class MCPVMBridge {
                 connectionVerified = updatedParent && updatedParent.next === child;
             } else {
                 // 验证输入连接
-                connectionVerified = updatedParent && 
-                    updatedParent.inputs && 
-                    updatedParent.inputs[inputName] && 
+                connectionVerified = updatedParent &&
+                    updatedParent.inputs &&
+                    updatedParent.inputs[inputName] &&
                     updatedParent.inputs[inputName].block === child;
             }
             
@@ -376,12 +376,12 @@ class MCPVMBridge {
     /**
      * 检查两个块是否兼容连接
      * @private
-     * @param {Object} parentBlock - 父块
-     * @param {Object} childBlock - 子块
+     * @param {object} parentBlock - 父块
+     * @param {object} childBlock - 子块
      * @param {string} inputName - 要连接的输入名称
      * @returns {boolean} 块是否兼容
      */
-    _checkBlocksCompatibility(parentBlock, childBlock, inputName) {
+    _checkBlocksCompatibility (parentBlock, childBlock, inputName) {
         // 这是一个基本兼容性检查，可以根据Scratch块的规则扩展
         
         // 一些块不能作为下一个块连接（例如帽子块）
@@ -399,22 +399,22 @@ class MCPVMBridge {
     /**
      * Create a stack of blocks
      * @param {Array} blockSpecs - Array of block specifications
-     * @param {Object} options - Options like position
-     * @returns {Object} Result with IDs of created blocks
+     * @param {object} options - Options like position
+     * @returns {object} Result with IDs of created blocks
      */
-    createBlockStack(blockSpecs, options = {}) {
+    createBlockStack (blockSpecs, options = {}) {
         if (!Array.isArray(blockSpecs) || blockSpecs.length === 0) {
             log.error('Invalid block specs provided');
-            return { success: false, error: 'Invalid block specifications' };
+            return {success: false, error: 'Invalid block specifications'};
         }
         
         try {
             const target = this.getCurrentTarget();
             if (!target) {
-                return { success: false, error: 'No active sprite selected' };
+                return {success: false, error: 'No active sprite selected'};
             }
             
-            const position = options.position || { x: 0, y: 0 };
+            const position = options.position || {x: 0, y: 0};
             const blockIds = [];
             let previousBlockId = null;
             
@@ -427,7 +427,7 @@ class MCPVMBridge {
                     null, // Use current target
                     spec.blockType,
                     spec.inputs || {},
-                    i === 0 ? position : { x: 0, y: 0 } // Only position the first block
+                    i === 0 ? position : {x: 0, y: 0} // Only position the first block
                 );
                 
                 blockIds.push(currentBlockId);
@@ -448,16 +448,16 @@ class MCPVMBridge {
             };
         } catch (error) {
             log.error('Error creating block stack:', error);
-            return { success: false, error: error.message };
+            return {success: false, error: error.message};
         }
     }
 
     /**
      * Get a block by ID
      * @param {string} blockId - ID of the block
-     * @returns {Object|null} The block or null if not found
+     * @returns {object|null} The block or null if not found
      */
-    getBlock(blockId) {
+    getBlock (blockId) {
         if (!this.vm.editingTarget || !this.vm.editingTarget.blocks) {
             return null;
         }
@@ -467,9 +467,9 @@ class MCPVMBridge {
 
     /**
      * Get all blocks for the current sprite
-     * @returns {Object|null} All blocks or null if no active sprite
+     * @returns {object|null} All blocks or null if no active sprite
      */
-    getAllBlocks() {
+    getAllBlocks () {
         if (!this.vm.editingTarget || !this.vm.editingTarget.blocks) {
             return null;
         }
@@ -480,10 +480,10 @@ class MCPVMBridge {
     /**
      * Add a costume to a sprite
      * @param {string} spriteId - ID of the sprite
-     * @param {Object} costumeData - Costume data (name, asset, etc)
-     * @returns {Promise<Object>} Result of the operation
+     * @param {object} costumeData - Costume data (name, asset, etc)
+     * @returns {Promise<object>} Result of the operation
      */
-    async addCostume(spriteId, costumeData) {
+    async addCostume (spriteId, costumeData) {
         try {
             const target = this.getSprite(spriteId);
             if (!target) {
@@ -498,19 +498,19 @@ class MCPVMBridge {
                 target.id
             );
             
-            return { success: true, costumeId: result.assetId };
+            return {success: true, costumeId: result.assetId};
         } catch (error) {
             log.error('Error adding costume:', error);
-            return { success: false, error: error.message };
+            return {success: false, error: error.message};
         }
     }
 
     /**
      * Create a new sprite
-     * @param {Object} options - Sprite creation options
-     * @returns {Object} The created sprite
+     * @param {object} options - Sprite creation options
+     * @returns {object} The created sprite
      */
-    async createSprite(options = {}) {
+    async createSprite (options = {}) {
         try {
             const sprite = await this.vm.addSprite();
             
@@ -531,7 +531,7 @@ class MCPVMBridge {
      * @param {number} x - X coordinate
      * @param {number} y - Y coordinate
      */
-    setSpritePosition(spriteId, x, y) {
+    setSpritePosition (spriteId, x, y) {
         const target = spriteId ? this.getSprite(spriteId) : this.getCurrentTarget();
         
         if (!target) {
@@ -543,9 +543,9 @@ class MCPVMBridge {
 
     /**
      * Get project info including sprites, stage size, etc.
-     * @returns {Object} Project information
+     * @returns {object} Project information
      */
-    getProjectInfo() {
+    getProjectInfo () {
         const sprites = this.vm.runtime.targets
             .filter(target => !target.isStage && target.isOriginal)
             .map(target => ({
@@ -574,22 +574,22 @@ class MCPVMBridge {
     /**
      * Start the project (green flag)
      */
-    runProject() {
+    runProject () {
         this.vm.greenFlag();
     }
 
     /**
      * Stop all scripts
      */
-    stopProject() {
+    stopProject () {
         this.vm.stopAll();
     }
 
     /**
      * Get the execution state of the project
-     * @returns {Object} Execution state information
+     * @returns {object} Execution state information
      */
-    getExecutionState() {
+    getExecutionState () {
         return {
             isRunning: this.vm.runtime.isRunning,
             activeThreads: this.vm.runtime.threads.filter(thread => thread.isRunning()).length
@@ -599,16 +599,16 @@ class MCPVMBridge {
     /**
      * Create a block using Blockly event simulation for better GUI integration
      * @private
-     * @param {Object} target - The target sprite
-     * @param {Object} blockSpec - Block specification
+     * @param {object} target - The target sprite
+     * @param {object} blockSpec - Block specification
      * @returns {string} Block ID
      */
-    _createBlockWithEvent(target, blockSpec) {
+    _createBlockWithEvent (target, blockSpec) {
         if (!target || !target.blocks) {
             throw new Error('Invalid target for block creation');
         }
         
-        const { id, opcode, inputs, position } = blockSpec;
+        const {id, opcode, inputs, position} = blockSpec;
         
         // Create a Blockly-style create event
         const createEvent = {
@@ -639,11 +639,11 @@ class MCPVMBridge {
     /**
      * Generate XML for a block specification
      * @private
-     * @param {Object} blockSpec - Block specification
+     * @param {object} blockSpec - Block specification
      * @returns {string} XML representation
      */
-    _generateBlockXML(blockSpec) {
-        const { id, opcode, inputs, position } = blockSpec;
+    _generateBlockXML (blockSpec) {
+        const {id, opcode, inputs, position} = blockSpec;
         
         let xml = `<block type="${opcode}" id="${id}"`;
         
@@ -673,7 +673,7 @@ class MCPVMBridge {
      * Uses multiple strategies to ensure GUI updates properly
      * @private
      */
-    _refreshWorkspace() {
+    _refreshWorkspace () {
         try {
             log.info('VM Bridge: Refreshing workspace after block operation');
             
@@ -705,8 +705,7 @@ class MCPVMBridge {
                 this.vm.emit('workspaceUpdate');
                 this.vm.emit('targetsUpdate');
                 log.info('VM Bridge: Workspace refreshed using direct event emission');
-            }
-            else {
+            } else {
                 log.warn('VM Bridge: No workspace refresh method available on VM');
             }
         } catch (error) {

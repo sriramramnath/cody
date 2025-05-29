@@ -185,17 +185,17 @@ let apiSettings = {
 
 /**
  * 设置 MCP 服务器实例
- * @param {Object} server - MCP 服务器实例
+ * @param {object} server - MCP 服务器实例
  */
-const setMCPServer = (server) => {
+const setMCPServer = server => {
     mcpServer = server;
 };
 
 /**
  * 更新 API 设置
- * @param {Object} settings - 新的设置对象
+ * @param {object} settings - 新的设置对象
  */
-const updateSettings = async (settings) => {
+const updateSettings = async settings => {
     if (settings.apiKey) apiSettings.apiKey = settings.apiKey;
     if (settings.apiUrl) apiSettings.apiUrl = settings.apiUrl;
     if (settings.modelName) apiSettings.modelName = settings.modelName;
@@ -247,7 +247,7 @@ const initializeOpenAIClient = () => {
  * @param {string|object} args - 工具调用的参数
  * @returns {object} 规范化后的参数对象
  */
-const normalizeToolArguments = (args) => {
+const normalizeToolArguments = args => {
     // 如果已经是对象，直接返回
     if (typeof args === 'object' && args !== null && !Array.isArray(args)) {
         return args;
@@ -322,8 +322,8 @@ const normalizeToolArguments = (args) => {
 
 /**
  * 测试与 DeepSeek API 的连接
- * @param {Object} testSettings - 用于测试的设置对象
- * @returns {Promise<Object>} - 包含连接结果的对象
+ * @param {object} testSettings - 用于测试的设置对象
+ * @returns {Promise<object>} - 包含连接结果的对象
  */
 const testConnection = async (testSettings = {}) => {
     try {
@@ -380,18 +380,16 @@ const testConnection = async (testSettings = {}) => {
  * 初始化聊天会话，返回初始消息数组
  * @returns {Array} 初始消息数组，包含系统提示
  */
-const initializeChat = () => {
-    return [
-        {
-            role: 'system',
-            content: DEFAULT_SYSTEM_PROMPT
-        },
-        {
-            role: 'assistant',
-            content: '你好！我是 Scratch 助手，有什么可以帮助你的吗？我可以直接操作 Scratch 项目，帮助你创建和修改程序。'
-        }
-    ];
-};
+const initializeChat = () => [
+    {
+        role: 'system',
+        content: DEFAULT_SYSTEM_PROMPT
+    },
+    {
+        role: 'assistant',
+        content: '你好！我是 Scratch 助手，有什么可以帮助你的吗？我可以直接操作 Scratch 项目，帮助你创建和修改程序。'
+    }
+];
 
 /**
  * 获取所有可用工具的定义
@@ -438,8 +436,8 @@ const getToolDefinitions = () => {
 /**
  * 准备 API 请求，包括工具定义和当前Scratch上下文
  * @param {Array} messages 消息历史
- * @param {Object} options 选项
- * @returns {Object} 请求体对象
+ * @param {object} options 选项
+ * @returns {object} 请求体对象
  */
 const prepareRequestBody = (messages, options) => {
     const {
@@ -465,9 +463,9 @@ const prepareRequestBody = (messages, options) => {
             scratchContext = {
                 sprites: [],
                 currentBlocksInfo: {},
-                stageInfo: { name: 'Stage', costumes: [] },
-                projectInfo: { name: '未命名项目', spriteCount: 0 },
-                canvasState: { isRunning: false, frameRate: 30 }
+                stageInfo: {name: 'Stage', costumes: []},
+                projectInfo: {name: '未命名项目', spriteCount: 0},
+                canvasState: {isRunning: false, frameRate: 30}
             };
         }
         
@@ -491,8 +489,8 @@ const prepareRequestBody = (messages, options) => {
             const name = sprite.name || '未命名角色';
             const blocks = sprite.blocks || {};
             const blockCount = typeof blocks === 'object' ? Object.keys(blocks).length : 0;
-            return blockCount > 0 ? 
-                `- ${name}: 包含 ${blockCount} 个顶级积木` : 
+            return blockCount > 0 ?
+                `- ${name}: 包含 ${blockCount} 个顶级积木` :
                 `- ${name}: 没有积木`;
         }).join('\n') : '- 无积木信息';
         
@@ -512,9 +510,9 @@ ${blocksInfo || '无积木数据'}
 ### 舞台信息:
 - 名称: ${scratchContext.stageInfo && scratchContext.stageInfo.name || 'Stage'}
 - 背景数: ${scratchContext.stageInfo && scratchContext.stageInfo.costumes ? scratchContext.stageInfo.costumes.length : 0}
-${scratchContext.stageInfo && scratchContext.stageInfo.costumes && Array.isArray(scratchContext.stageInfo.costumes) && scratchContext.stageInfo.costumes.length > 0
-  ? `- 当前背景: ${scratchContext.stageInfo.costumes[typeof scratchContext.stageInfo.currentCostume === 'number' ? scratchContext.stageInfo.currentCostume : 0]?.name || 'unknown'}` 
-  : ''}
+${scratchContext.stageInfo && scratchContext.stageInfo.costumes && Array.isArray(scratchContext.stageInfo.costumes) && scratchContext.stageInfo.costumes.length > 0 ?
+        `- 当前背景: ${scratchContext.stageInfo.costumes[typeof scratchContext.stageInfo.currentCostume === 'number' ? scratchContext.stageInfo.currentCostume : 0]?.name || 'unknown'}` :
+        ''}
 
 ## 工具使用指南 (必须遵守)
 1. 必须使用MCP工具来操作Scratch项目，不允许只使用文字描述
@@ -555,7 +553,7 @@ ${scratchContext.stageInfo && scratchContext.stageInfo.costumes && Array.isArray
         messages,
         temperature,
         max_tokens: maxTokens,
-        stream: options.onStream ? true : false
+        stream: !!options.onStream
     };
     
     // 添加所有工具定义
@@ -567,17 +565,17 @@ ${scratchContext.stageInfo && scratchContext.stageInfo.costumes && Array.isArray
         // DeepSeek API需要特定的工具选择方式
         const firstTool = toolDefinitions[0];
         requestBody.tool_choice = {
-            type: "function",
+            type: 'function',
             function: {
                 name: firstTool.function.name
             }
         };
         
         // 在某些情况下使用auto模式
-        if (messages.length > 0 && messages[messages.length - 1].content && 
-            !messages[messages.length - 1].content.includes('必须使用') && 
+        if (messages.length > 0 && messages[messages.length - 1].content &&
+            !messages[messages.length - 1].content.includes('必须使用') &&
             !messages[messages.length - 1].content.includes('tool')) {
-            requestBody.tool_choice = "auto";
+            requestBody.tool_choice = 'auto';
         }
     }
     
@@ -586,14 +584,14 @@ ${scratchContext.stageInfo && scratchContext.stageInfo.costumes && Array.isArray
 
 /**
  * 处理 Bing 搜索工具调用
- * @param {Object} args - 搜索参数
+ * @param {object} args - 搜索参数
  * @param {string} args.query - 搜索查询
  * @param {number} args.count - 结果数量
- * @returns {Promise<Object>} 搜索结果
+ * @returns {Promise<object>} 搜索结果
  */
-const handleBingSearchToolCall = async (args) => {
+const handleBingSearchToolCall = async args => {
     try {
-        const { query, count = 3 } = args;
+        const {query, count = 3} = args;
         
         if (!query || typeof query !== 'string' || query.trim() === '') {
             return {
@@ -608,9 +606,9 @@ const handleBingSearchToolCall = async (args) => {
         });
         
         // 添加搜索消息
-        const message = searchResults.success
-            ? `搜索 "${query}" 成功，找到 ${searchResults.results.length} 个结果`
-            : `搜索 "${query}" 失败`;
+        const message = searchResults.success ?
+            `搜索 "${query}" 成功，找到 ${searchResults.results.length} 个结果` :
+            `搜索 "${query}" 失败`;
             
         return {
             ...searchResults,
@@ -628,14 +626,14 @@ const handleBingSearchToolCall = async (args) => {
 
 /**
  * 处理可能的工具调用
- * @param {Object} data API 响应数据
- * @returns {Object} 处理后的响应数据，包含工具调用信息
+ * @param {object} data API 响应数据
+ * @returns {object} 处理后的响应数据，包含工具调用信息
  */
-const handleToolCalls = async (data) => {
+const handleToolCalls = async data => {
     // 如果没有工具调用，直接返回
-    if (!data.choices || 
-        !data.choices[0] || 
-        !data.choices[0].message || 
+    if (!data.choices ||
+        !data.choices[0] ||
+        !data.choices[0].message ||
         !data.choices[0].message.tool_calls) {
         return data;
     }
@@ -719,7 +717,7 @@ const handleToolCalls = async (data) => {
         id: tc.id
     }));
     
-    console.log(`工具调用摘要: ${pendingToolCalls.length} 个工具调用`, 
+    console.log(`工具调用摘要: ${pendingToolCalls.length} 个工具调用`,
         JSON.stringify(toolCallsSummary));
     
     // 修改返回数据，包含原始回复和待处理的工具调用
@@ -738,9 +736,9 @@ const handleToolCalls = async (data) => {
 /**
  * 执行待处理的工具调用
  * @param {Array} pendingToolCalls - 待处理的工具调用数组
- * @returns {Promise<Object>} 工具调用结果
+ * @returns {Promise<object>} 工具调用结果
  */
-const executeToolCalls = async (pendingToolCalls) => {
+const executeToolCalls = async pendingToolCalls => {
     const toolResults = [];
     const toolSummaries = [];
     let hasErrors = false;
@@ -771,8 +769,8 @@ const executeToolCalls = async (pendingToolCalls) => {
             }
             
             // 计算视觉工具使用次数
-            if (['createBlock', 'connectBlocks', 'createSprite', 'setSpritePosition', 
-                 'setSpriteSize', 'setSpriteDirection', 'runProject', 'stopProject'].includes(toolName)) {
+            if (['createBlock', 'connectBlocks', 'createSprite', 'setSpritePosition',
+                'setSpriteSize', 'setSpriteDirection', 'runProject', 'stopProject'].includes(toolName)) {
                 visualToolsUsed++;
             } else if (['getProjectInfo', 'getExecutionState'].includes(toolName)) {
                 informationToolsUsed++;
@@ -837,7 +835,7 @@ const executeToolCalls = async (pendingToolCalls) => {
                     success: false,
                     error: `未知工具: ${toolName}`
                 };
-            }                // 为返回结果添加更多上下文信息
+            } // 为返回结果添加更多上下文信息
             if (result.success) {
                 // 添加额外信息以帮助 DeepSeek 理解结果
                 if (toolName === 'createBlock') {
@@ -868,7 +866,7 @@ const executeToolCalls = async (pendingToolCalls) => {
                         result.recoveryTips = '尝试再次创建块，或使用不同的块类型。某些类型在特定上下文中可能无法创建。';
                     } else if (toolName === 'connectBlocks') {
                         // 提供块缓存中的可用块ID
-                        const availableBlockIds = window.mcpBlockCache ? 
+                        const availableBlockIds = window.mcpBlockCache ?
                             Object.keys(window.mcpBlockCache).filter(k => k !== 'lastCreatedBlockId') : [];
                             
                         if (availableBlockIds.length > 0) {
@@ -946,14 +944,14 @@ const executeToolCalls = async (pendingToolCalls) => {
 /**
  * 发送消息到 DeepSeek API 并获取回复
  * @param {Array} messages 消息历史 [{role: "user" | "assistant", content: string}]
- * @param {Object} options 可选参数
+ * @param {object} options 可选参数
  * @param {Function} options.onStream 流式处理回调函数，启用时会以流式方式处理响应
- * @returns {Promise<Object>} API 响应对象
- * 
+ * @returns {Promise<object>} API 响应对象
+ *
  * @example
  * // 非流式处理示例
  * const response = await sendMessage([{role: 'user', content: '你好'}]);
- * 
+ *
  * @example
  * // 流式处理示例
  * const response = await sendMessage([{role: 'user', content: '你好'}], {
@@ -983,8 +981,8 @@ const sendMessage = async (messages, options = {}) => {
         
         const requestBody = prepareRequestBody(messages, options);
         
-        console.log('发送请求到 DeepSeek API (通过 OpenAI SDK):', { 
-            messages, 
+        console.log('发送请求到 DeepSeek API (通过 OpenAI SDK):', {
+            messages,
             model: options.model || apiSettings.modelName,
             hasTools: !!requestBody.tools,
             toolSummary: options.toolSummary
@@ -1036,7 +1034,7 @@ ${options.toolSummary.visualToolsUsed > 2 ? '👍 很棒！继续使用工具让
                     content: `${DEFAULT_SYSTEM_PROMPT}\n\n${summaryText}`
                 });
             }
-        } 
+        }
         
         // 在每次请求中添加更强的工具使用提示
         // 分析用户意图并添加上下文相关的工具使用提示
@@ -1072,7 +1070,7 @@ ${options.toolSummary.visualToolsUsed > 2 ? '👍 很棒！继续使用工具让
             toolPrompt += '。请始终优先使用工具直接操作Scratch项目，这比文字解释更直观有效)';
             
             // 附加工具使用提示
-            lastMessage.content = `${originalContent}\n\n${toolPrompt}`;
+            // lastMessage.content = `${originalContent}\n\n${toolPrompt}`;
         }
         
         
@@ -1100,7 +1098,7 @@ ${options.toolSummary.visualToolsUsed > 2 ? '👍 很棒！继续使用工具让
             const isStreamEnabled = !!options.onStream;
             
             // 设置超时控制
-            const timeoutDuration = 60000*10; // 90秒超时
+            const timeoutDuration = 60000 * 10; // 90秒超时
             let timeoutId;
             const timeoutPromise = new Promise((_, reject) => {
                 timeoutId = setTimeout(() => reject(new Error('请求超时，API响应时间过长')), timeoutDuration);
@@ -1126,9 +1124,9 @@ ${options.toolSummary.visualToolsUsed > 2 ? '👍 很棒！继续使用工具让
                     let fullContent = '';
                     let responseId = `gen_${Date.now()}`;
                     let model = requestBody.model;
-                    let toolCalls = [];
+                    const toolCalls = [];
                     let finishReason = null;
-                    let messageRole = 'assistant';
+                    const messageRole = 'assistant';
                     
                     // 创建流式请求
                     const stream = await openaiClient.chat.completions.create(streamConfig);
@@ -1191,7 +1189,7 @@ ${options.toolSummary.visualToolsUsed > 2 ? '👍 很棒！继续使用工具让
                             if (options.onStream) {
                                 options.onStream({
                                     type: 'tool_call',
-                                    toolCall: { ...toolCall },
+                                    toolCall: {...toolCall},
                                     toolCalls: [...toolCalls],
                                     done: false
                                 });
@@ -1282,7 +1280,7 @@ ${options.toolSummary.visualToolsUsed > 2 ? '👍 很棒！继续使用工具让
                 // 清除超时定时器
                 clearTimeout(timeoutId);
                 
-                console.log('收到 DeepSeek API 回复 (通过 OpenAI SDK):', 
+                console.log('收到 DeepSeek API 回复 (通过 OpenAI SDK):',
                     response ? {
                         id: response.id,
                         model: response.model,
@@ -1313,10 +1311,10 @@ ${options.toolSummary.visualToolsUsed > 2 ? '👍 很棒！继续使用工具让
                         message: response.choices[0].message,
                         finish_reason: response.choices[0].finish_reason || 'stop'
                     }],
-                    usage: response.usage || { 
-                        prompt_tokens: 0, 
-                        completion_tokens: 0, 
-                        total_tokens: 0 
+                    usage: response.usage || {
+                        prompt_tokens: 0,
+                        completion_tokens: 0,
+                        total_tokens: 0
                     }
                 };
                 
@@ -1375,10 +1373,10 @@ ${options.toolSummary.visualToolsUsed > 2 ? '👍 很棒！继续使用工具让
 /**
  * 发送工具调用结果到 DeepSeek API 以获取最终回复
  * @param {Array} messages - 原始消息历史
- * @param {Object} data - 原始 API 响应数据
- * @param {Object} toolResults - 工具调用结果
- * @param {Object} options - 可选参数，包括 onStream 回调函数
- * @returns {Promise<Object>} 最终回复对象
+ * @param {object} data - 原始 API 响应数据
+ * @param {object} toolResults - 工具调用结果
+ * @param {object} options - 可选参数，包括 onStream 回调函数
+ * @returns {Promise<object>} 最终回复对象
  */
 const sendToolResults = async (messages, data, toolResults, options = {}) => {
     try {
@@ -1416,8 +1414,8 @@ const sendToolResults = async (messages, data, toolResults, options = {}) => {
         ];
         
         // 添加基于工具使用的评估和建议
-        let toolFeedback = "";
-        const { visualToolsUsed, informationToolsUsed } = toolResults.stats;
+        let toolFeedback = '';
+        const {visualToolsUsed, informationToolsUsed} = toolResults.stats;
         
         if (visualToolsUsed > 0) {
             toolFeedback += `很好！你使用了${visualToolsUsed}个视觉操作工具来直接在Scratch上展示。`;
@@ -1436,7 +1434,7 @@ const sendToolResults = async (messages, data, toolResults, options = {}) => {
         // 更健壮的消息格式处理，确保消息格式符合 OpenAI SDK 的期望
         const cleanMessages = newMessages.map(msg => {
             // 创建基础消息对象
-            const cleanMsg = { role: msg.role };
+            const cleanMsg = {role: msg.role};
             
             // 处理内容字段
             if (msg.content !== undefined) {
@@ -1493,7 +1491,7 @@ const sendToolResults = async (messages, data, toolResults, options = {}) => {
         console.log('清理后消息格式:', cleanMessages.map(m => ({role: m.role, hasToolCalls: !!m.tool_calls})));
         
         // 准备发送请求的选项
-        const sendOptions = { 
+        const sendOptions = {
             model: data.model,
             // 添加操作摘要
             toolSummary: {
@@ -1527,11 +1525,11 @@ const sendToolResults = async (messages, data, toolResults, options = {}) => {
 /**
  * 合并流式消息碎片
  * @param {Array} chunks - 接收到的消息片段数组
- * @returns {Object} 合并后的消息对象
+ * @returns {object} 合并后的消息对象
  */
-const mergeStreamChunks = (chunks) => {
+const mergeStreamChunks = chunks => {
     if (!chunks || chunks.length === 0) {
-        return { content: '', toolCalls: [] };
+        return {content: '', toolCalls: []};
     }
     
     let content = '';
@@ -1555,17 +1553,17 @@ const mergeStreamChunks = (chunks) => {
                 
                 if (existingIndex >= 0) {
                     // 更新现有工具调用
-                    toolCalls[existingIndex] = { ...tc };
+                    toolCalls[existingIndex] = {...tc};
                 } else {
                     // 添加新工具调用
-                    toolCalls.push({ ...tc });
+                    toolCalls.push({...tc});
                 }
             }
         }
     }
     
     // 返回合并后的结果
-    return { content, toolCalls };
+    return {content, toolCalls};
 };
 
 export default {
@@ -1577,6 +1575,6 @@ export default {
     testConnection,
     executeToolCalls,
     sendToolResults,
-    normalizeToolArguments,  // 导出参数规范化函数供其他模块使用
-    mergeStreamChunks       // 导出流式消息合并函数
+    normalizeToolArguments, // 导出参数规范化函数供其他模块使用
+    mergeStreamChunks // 导出流式消息合并函数
 };

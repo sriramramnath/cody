@@ -55,7 +55,7 @@ export const hasTables = content => {
 
 /**
  * 检查文本是否包含引用块
- * @param {string} content - 要检查的文本内容  
+ * @param {string} content - 要检查的文本内容
  * @returns {boolean} - 如果包含引用块返回true
  */
 export const hasBlockquotes = content => {

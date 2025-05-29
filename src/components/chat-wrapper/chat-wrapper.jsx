@@ -4,8 +4,8 @@ import {FormattedMessage} from 'react-intl';
 import Box from '../box/box.jsx';
 import Modal from '../modal/modal.jsx';  // 导入模态框组件
 import layout from '../../lib/layout-constants';
-import deepseekAPI from '../../lib/deepseek-api';
-import indexedDBHelper from '../../lib/indexed-db-helper';  // 导入 IndexedDB 助手
+import deepseekAPI from './lib/deepseek-api';
+import indexedDBHelper from './lib/indexed-db-helper';  // 导入 IndexedDB 助手
 import MessageWithMarkdown from './message-with-markdown.jsx';  // 导入Markdown渲染组件
 import {hasCodeBlocks, hasMarkdown} from './markdown-utils';  // 导入Markdown检测工具
 

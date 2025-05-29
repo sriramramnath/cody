@@ -373,7 +373,7 @@ const GUIComponent = props => {
                         </Box>
 
                         {/* 聊天区域组件 - 放在最右侧 */}
-                        <ChatWrapper 
+                        <ChatWrapper
                             vm={vm}
                         />
                     </Box>
