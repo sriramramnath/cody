@@ -561,20 +561,13 @@ ${scratchContext.stageInfo && scratchContext.stageInfo.costumes && Array.isArray
     if (toolDefinitions.length > 0) {
         requestBody.tools = toolDefinitions;
         
-        // 修改：设置工具选择偏好为强制使用工具
-        // DeepSeek API需要特定的工具选择方式
-        const firstTool = toolDefinitions[0];
-        requestBody.tool_choice = {
-            type: 'function',
-            function: {
-                name: firstTool.function.name
-            }
-        };
-        
-        // 在某些情况下使用auto模式
-        if (messages.length > 0 && messages[messages.length - 1].content &&
-            !messages[messages.length - 1].content.includes('必须使用') &&
-            !messages[messages.length - 1].content.includes('tool')) {
+        // 检查模型是否支持tool_choice
+        // deepseek-reasoner 不支持 tool_choice，使用 deepseek-chat 模型
+        if (requestBody.model && requestBody.model.includes('reasoner')) {
+            // 对于 reasoner 模型，不设置 tool_choice，让模型自动判断
+            console.log('检测到 reasoner 模型，不设置 tool_choice 参数');
+        } else {
+            // 对于其他模型，设置 tool_choice 为 auto
             requestBody.tool_choice = 'auto';
         }
     }
@@ -1070,7 +1063,7 @@ ${options.toolSummary.visualToolsUsed > 2 ? '👍 很棒！继续使用工具让
             toolPrompt += '。请始终优先使用工具直接操作Scratch项目，这比文字解释更直观有效)';
             
             // 附加工具使用提示
-            // lastMessage.content = `${originalContent}\n\n${toolPrompt}`;
+            lastMessage.content = `${originalContent}\n\n${toolPrompt}`;
         }
         
         
@@ -1115,9 +1108,13 @@ ${options.toolSummary.visualToolsUsed > 2 ? '👍 很棒！继续使用工具让
                     temperature: requestBody.temperature,
                     max_tokens: requestBody.max_tokens,
                     stream: true,
-                    tools: requestBody.tools,
-                    tool_choice: requestBody.tool_choice
+                    tools: requestBody.tools
                 };
+                
+                // 只有在支持的模型中才添加 tool_choice
+                if (requestBody.tool_choice) {
+                    streamConfig.tool_choice = requestBody.tool_choice;
+                }
                 
                 try {
                     // 收集完整响应数据
@@ -1402,14 +1399,29 @@ const sendToolResults = async (messages, data, toolResults, options = {}) => {
         });
         
         // 创建包含工具调用结果的新消息数组
+        // 创建助手消息，确保至少有content或tool_calls中的一个
+        const assistantPayload = {
+            role: 'assistant'
+        };
+        
+        // 如果有内容，则添加content字段
+        if (assistantMessage.content) {
+            assistantPayload.content = assistantMessage.content;
+        }
+        
+        // 如果有工具调用，则添加tool_calls字段
+        if (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
+            assistantPayload.tool_calls = assistantMessage.tool_calls;
+        }
+        
+        // 如果既没有content也没有tool_calls，添加一个默认的content
+        if (!assistantPayload.content && (!assistantPayload.tool_calls || assistantPayload.tool_calls.length === 0)) {
+            assistantPayload.content = " "; // 使用空格作为最小内容以符合API要求
+        }
+        
         const newMessages = [
             ...messages, // 原始消息
-            // 确保助手消息包含必要的字段
-            {
-                role: 'assistant',
-                content: assistantMessage.content || '',
-                tool_calls: assistantMessage.tool_calls || []
-            },
+            assistantPayload, // 确保格式正确的助手消息
             ...formattedToolResults // 格式化后的工具调用结果
         ];
         
@@ -1529,7 +1541,8 @@ const sendToolResults = async (messages, data, toolResults, options = {}) => {
  */
 const mergeStreamChunks = chunks => {
     if (!chunks || chunks.length === 0) {
-        return {content: '', toolCalls: []};
+        // 确保返回一个有效的消息格式，避免 content 和 toolCalls 都为空的情况
+        return {content: ' ', toolCalls: []};
     }
     
     let content = '';
@@ -1562,8 +1575,28 @@ const mergeStreamChunks = chunks => {
         }
     }
     
-    // 返回合并后的结果
+    // 返回合并后的结果，确保content和toolCalls至少有一个不为空
+    if (content === '' && (!toolCalls || toolCalls.length === 0)) {
+        // 如果两者都为空，添加一个空格作为最小内容
+        return {content: ' ', toolCalls};
+    }
+    
     return {content, toolCalls};
+};
+
+/**
+ * 获取当前设置（异步）
+ * 确保从存储中加载最新设置
+ * @returns {Promise<object>} 当前的API设置
+ */
+const getSettings = async () => {
+    // 从存储重新加载设置以确保数据一致性
+    const latestSettings = await loadSettingsFromStorage();
+    
+    // 更新内存中的设置
+    apiSettings = latestSettings;
+    
+    return { ...apiSettings };
 };
 
 export default {
@@ -1571,6 +1604,7 @@ export default {
     initializeChat,
     setMCPServer,
     getToolDefinitions,
+    getSettings,
     updateSettings,
     testConnection,
     executeToolCalls,

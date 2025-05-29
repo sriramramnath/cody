@@ -1081,3 +1081,7 @@
 .drawerOverlay.visible {
     display: block;
 }
+
+/* ===== Markdown 样式已移至 markdown-styles.css ===== */
+/* 此处移除所有 Markdown 相关样式，由 message-with-markdown.jsx 引入的 markdown-styles.css 提供样式支持 */
+
