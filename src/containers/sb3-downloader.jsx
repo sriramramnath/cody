@@ -5,7 +5,8 @@ import { connect } from 'react-redux'
 import { projectTitleInitialState } from '../reducers/project-title'
 import downloadBlob from '../lib/download-blob'
 import localforage from 'localforage'
-import { setIsSavingState, setIsScratchData } from './../reducers/vm-status.js'
+import { setIsSavingState, setIsScratchData, setIsSavingStateStatus, setIsPendingState, setProjectName } from './../reducers/vm-status.js'
+import { set } from 'core-js/core/dict'
 /**
  * Project saver component passes a downloadProject function to its child.
  * It expects this child to be a function with the signature
@@ -43,15 +44,17 @@ class SB3Downloader extends React.Component {
     const currentprojectName = url.get('projectname')
     const inputLayout = url.get('inputLayout')
     const fetchapiurl = url.get('fetchapiurl');
-
+    if(currentprojectName){
+      this.props.setProjectName(currentprojectName)
+    }
     if (inputLayout === 'myprojects') {
       if (this.props.isFirst) {
         return
       }
-
       if (this.debounceTimeout) {
         clearTimeout(this.debounceTimeout)
       }
+      this.props.setIsPendingState(true)
       this.debounceTimeout = setTimeout(async () => {
         if (this.abortController) {
           this.abortController.abort()
@@ -68,9 +71,9 @@ class SB3Downloader extends React.Component {
           const reader = new FileReader()
           reader.onloadend = async () => {
             const buffer = reader.result
-            const binaryString = Array.prototype.map
-              .call(new Uint8Array(buffer), (x) => String.fromCharCode(x))
-              .join('')
+            // const binaryString = Array.prototype.map
+            //   .call(new Uint8Array(buffer), (x) => String.fromCharCode(x))
+            //   .join('')
             let base64blocks = btoa(
               new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), ''),
             )
@@ -80,8 +83,10 @@ class SB3Downloader extends React.Component {
             }
             this.previousBase64 = base64blocks
 
+            console.log('scratch project name ',this.props.projectName)
+
             const structure = {
-              name: currentprojectName,
+              name: this.props.projectName,
               projectType: 'scratch',
               content: base64blocks,
             }
@@ -89,10 +94,13 @@ class SB3Downloader extends React.Component {
             const structureString = JSON.stringify(structure)
 
             const apiUrl = `${fetchapiurl}/projects/${projectId}`
-
+      
             try {
+              if(!this.props.projectName || !currentprojectName) {
+                return
+              }
               this.props.setIsSavingState(true)
-              localforage.setItem('savingStatus',true)
+              this.props.setIsSavingStateStatus('Saving project')
               await fetch(apiUrl, {
                 method: 'PUT',
                 headers: {
@@ -102,17 +110,21 @@ class SB3Downloader extends React.Component {
                 credentials: 'include',
                 signal,
               })
+              this.props.setIsSavingStateStatus('Project saved successfully')
+              this.props.setIsPendingState(false)
             } catch (error) {
-              console.error('Error in sb3--:', error)
-              localforage.setItem('savingStatus',false)
+              this.props.setIsSavingStateStatus('Error saving project')
+              this.props.setIsPendingState(false)
             } finally {
               this.props.setIsSavingState(false)
-              localforage.setItem('savingStatus',false)
+              setTimeout(() => {
+                this.props.setIsSavingStateStatus('')
+              }, 2000)
             }
           }
           reader.readAsArrayBuffer(content)
         })
-      }, 500)
+      }, 5000)
     } else {
       const projectName = await localforage.getItem('Current_Project_Name')
       this.props.saveProjectSb3().then((content) => {
@@ -166,11 +178,15 @@ const mapStateToProps = (state) => ({
   saveProjectSb3: state.scratchGui.vm.saveProjectSb3.bind(state.scratchGui.vm),
   isFirst: state.scratchGui.vmStatus.isFirst,
   projectFilename: getProjectFilename(state.scratchGui.projectTitle, projectTitleInitialState),
+  projectName: state.scratchGui.vmStatus.projectName,
 })
 
 const mapDispatchToProps = {
   setIsSavingState,
   setIsScratchData,
+  setIsSavingStateStatus,
+  setIsPendingState,
+  setProjectName,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(SB3Downloader)

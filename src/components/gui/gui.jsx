@@ -136,6 +136,9 @@ const GUIComponent = (props) => {
     vm,
     spriteClicked,
     isScratchData,
+    isSaving,
+    isPendingState,
+    projectName,  
     ...componentProps
   } = omit(props, 'dispatch')
   if (children) {
@@ -172,8 +175,9 @@ const GUIComponent = (props) => {
           messenger,
           methods: {
             getScratchState(message) {
-              return message; // Respond to parent with the message
+              return message; 
             },
+
           },
           timeout: 5000,
         });
@@ -197,12 +201,6 @@ const GUIComponent = (props) => {
   }, []);
 
   useEffect(() => {
-    if (remote) {
-      remote.updateStateFromScratch?.(isScratchData);
-    }
-  }, [remote, isScratchData]);
-
-  useEffect(() => {
     localforage.getItem('currentLayout').then(value => {
       if (value !== null) {
         setCurrentLayout(value)
@@ -211,6 +209,32 @@ const GUIComponent = (props) => {
     
     });
   }, [])
+
+
+  useEffect(() => {
+    if (remote && currentLayout === 'studentChallenge') {
+      remote.updateStateFromScratch?.(isScratchData);
+    }
+  }, [remote, isScratchData, currentLayout]);
+
+  useEffect(() => {
+    if (remote) {
+      remote.isLayoutLoading?.(isSaving)
+    }
+  }, [remote, isSaving]);
+
+  useEffect(()=>{
+    if(remote){
+      remote.isPending?.(isPendingState)
+    }
+  },[remote, isPendingState])
+
+  useEffect(()=>{
+    if(remote){
+      remote.updateProjectName?.(projectName)
+    }
+  },[remote, projectName])
+
 
   return (
     <MediaQuery minWidth={layout.fullSizeMinWidth}>
@@ -523,6 +547,10 @@ const mapStateToProps = (state) => ({
   theme: state.scratchGui.theme.theme,
   spriteClicked: state.scratchGui.vmStatus.spriteClicked,
   isScratchData: state.scratchGui.vmStatus.isScratchData,
+  isSaving: state.scratchGui.vmStatus.isSaving,
+  isSaving: state.scratchGui.vmStatus.isSaving,
+  isPendingState: state.scratchGui.vmStatus.isPendingState,
+  projectName: state.scratchGui.vmStatus.projectName,
 })
 
 const mapDispatchToProps = {

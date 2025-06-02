@@ -3,6 +3,8 @@ const SET_TURBO_STATE = "scratch-gui/vm-status/SET_TURBO_STATE";
 const SET_STARTED_STATE = "scratch-gui/vm-status/SET_STARTED_STATE";
 const SET_FLAG_CLICKED_STATE = "scratch-gui/vm-status/SET_FLAG_CLICKED_STATE";
 const SET_IS_SAVING_STATE = "scratch-gui/vm-status/SET_IS_SAVING_STATE";
+const SET_IS_SAVING_STATE_STATUS =
+    "scratch-gui/vm-status/SET_IS_SAVING_STATE_STATUS";
 const SET_IS_FIRST_STATE = "scratch-gui/vm-status/SET_IS_FIRST_STATE";
 const SET_IS_SCRATCH_DATA = "scratch-gui/vm-status/SET_IS_SCRATCH_DATA";
 const SET_IS_LOADING_STATE = "scratch-gui/vm-status/SET_IS_LOADING_STATE";
@@ -10,6 +12,8 @@ const SET_SPRITE_CLICKED_STATE =
     "scratch-gui/vm-status/SET_SPRITE_CLICKED_STATE";
 const SET_COSTUME_URL_STATE = "scratch-gui/vm-status/SET_COSTUME_URL_STATE";
 const SET_AUTO_SAVE_STATE = "scratch-gui/vm-status/SET_AUTO_SAVE_STATE";
+const SET_PROJECT_NAME = "scratch-gui/vm-status/SET_PROJECT_NAME";
+const SET_IS_PENDING_STATE = "scratch-gui/vm-status/SET_IS_PENDING_STATE";
 
 const initialState = {
     running: false,
@@ -20,9 +24,12 @@ const initialState = {
     autoSave: false,
     costumeURLFax: "",
     isSaving: false,
+    isSavingStatus: "",
     isFirst: true,
     isScratchData: "",
     isLoading: false,
+    projectName: "",
+    isPendingState: false,
 };
 
 const reducer = function (state, action) {
@@ -48,6 +55,10 @@ const reducer = function (state, action) {
             return Object.assign({}, state, {
                 isSaving: action.isSaving,
             });
+        case SET_IS_SAVING_STATE_STATUS:
+            return Object.assign({}, state, {
+                isSavingStatus: action.isSavingStatus,
+            });
         case SET_IS_FIRST_STATE:
             return Object.assign({}, state, {
                 isFirst: action.isFirst,
@@ -71,6 +82,14 @@ const reducer = function (state, action) {
         case SET_COSTUME_URL_STATE:
             return Object.assign({}, state, {
                 costumeURLFax: action.costumeURLFax,
+            });
+        case SET_PROJECT_NAME:
+            return Object.assign({}, state, {
+                projectName: action.projectName,
+            });
+        case SET_IS_PENDING_STATE:
+            return Object.assign({}, state, {
+                isPendingState: action.isPendingState,
             });
         default:
             return state;
@@ -109,6 +128,13 @@ const setIsSavingState = function (isSaving) {
     return {
         type: SET_IS_SAVING_STATE,
         isSaving: isSaving,
+    };
+};
+
+const setIsSavingStateStatus = function (isSavingStatus) {
+    return {
+        type: SET_IS_SAVING_STATE_STATUS,
+        isSavingStatus: isSavingStatus,
     };
 };
 
@@ -154,6 +180,20 @@ const setCostumeClickedState = function (costumeURLFax) {
     };
 };
 
+const setProjectName = function (projectName) {
+    return {
+        type: SET_PROJECT_NAME,
+        projectName: projectName,
+    };
+};
+
+const setIsPendingState = function (isPendingState) {
+    return {
+        type: SET_IS_PENDING_STATE,
+        isPendingState: isPendingState,
+    };
+};
+
 export {
     reducer as default,
     initialState as vmStatusInitialState,
@@ -162,10 +202,13 @@ export {
     setTurboState,
     setFlagClickedState,
     setIsSavingState,
+    setIsSavingStateStatus,
     setIsFirstState,
     setIsScratchData,
     setIsLoadingState,
     setSpriteClickedState,
     setCostumeClickedState,
     setAutoSaveState,
+    setProjectName,
+    setIsPendingState,
 };

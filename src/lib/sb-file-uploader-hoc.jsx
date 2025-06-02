@@ -15,6 +15,7 @@ import {
 } from '../reducers/project-state'
 import { setProjectTitle } from '../reducers/project-title'
 import { openLoadingProject, closeLoadingProject } from '../reducers/modals'
+import { setProjectName } from '../reducers/vm-status.js'
 import { closeFileMenu } from '../reducers/menus'
 
 const messages = defineMessages({
@@ -142,10 +143,61 @@ const SBFileUploaderHOC = function (WrappedComponent) {
         let loadingSuccess = false
         this.props.vm
           .loadProject(this.fileReader.result)
-          .then(() => {
+          .then(async() => {
+            let base64blocks = btoa(
+              new Uint8Array(this.fileReader.result).reduce((data, byte) => data + String.fromCharCode(byte), ''),
+            )
             if (filename) {
               const uploadedProjectTitle = this.getProjectTitleFromFilename(filename)
               this.props.onSetProjectTitle(uploadedProjectTitle)
+              const url = new URLSearchParams(window.location.search)
+              const projectId = url.get('projectid')
+              const fetchapiurl = url.get('fetchapiurl')
+              if (projectId) {
+                try {
+                  if(!uploadedProjectTitle){
+                    throw new Error('Project title is empty')
+                  }
+                  const updatedData = {
+                    name: uploadedProjectTitle,
+                    projectType: 'scratch',
+                    content: base64blocks,
+                  };
+              
+                  const updateProjectById = async (id, data) => {
+                    const apiUrl = `${fetchapiurl}/projects/${id}`;
+                    try {
+                      const response = await fetch(apiUrl, {
+                        method: 'PUT',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(data),
+                        credentials: 'include',
+                      });
+              
+                      if (!response.ok) {
+                        throw new Error(`Failed to update project: ${response.statusText}`);
+                      }
+                      const res =  await response.json()
+                      console.log('Response from updateProjectById:', res);
+                      this.props.setProjectName(res?.name)
+                    } catch (error) {
+                      const updatedData = {
+                        name: uploadedProjectTitle + '' + Math.floor(Math.random() * 1000),
+                        projectType: 'scratch',
+                        content: base64blocks,
+                      };
+                      await updateProjectById(projectId, updatedData);
+                      console.error('error error error', error.message, error);
+                    }
+                  };
+            
+                  await updateProjectById(projectId, updatedData);
+                } catch (error) {
+                  console.error('Error updating project:', error);
+                }
+              }
             }
             loadingSuccess = true
           })
@@ -247,6 +299,7 @@ const SBFileUploaderHOC = function (WrappedComponent) {
     // project data. When this is done, the project state transition will be
     // noticed by componentDidUpdate()
     requestProjectUpload: (loadingState) => dispatch(requestProjectUpload(loadingState)),
+    setProjectName: (name) => dispatch(setProjectName(name)),
   })
   // Allow incoming props to override redux-provided props. Used to mock in tests.
   const mergeProps = (stateProps, dispatchProps, ownProps) =>

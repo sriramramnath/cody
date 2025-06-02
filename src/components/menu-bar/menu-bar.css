@@ -38,7 +38,7 @@
 
 
 .saving-state{
-    width: 9rem;
+    width: auto;
     display: flex;
     flex-direction: row;
     justify-content: center;
@@ -46,12 +46,12 @@
     padding: 0.5rem 0.5rem 0.5rem 0.5rem;
     margin-left: 1rem;
     font-size: 0.8rem;
-    color: #855CD6;
+    color: #000000;
 }
 
 
 .loading-state{
-    width: 15rem;
+    width: auto;
     display: flex;
     flex-direction: row;
     justify-content: center;
@@ -59,35 +59,20 @@
     padding: 0.5rem 0.5rem 0.5rem 0.5rem;
     margin-left: 1rem;
     font-size: 0.8rem;
-    color: #855CD6;
+    color: #000000;
+
 }
 
 .loader {
-    width: 6px;
-    height: 6px;
+    width: 10px;
+    aspect-ratio: 1;
     border-radius: 50%;
-    display: block;
-    margin:10px auto;
-    position: relative;
-    color: #855CD6;
-    box-sizing: border-box;
-    animation: animloader 1s linear infinite alternate;
+    border: 6px solid;
+    border-color: #000 #0000;
+    animation: l1 1s infinite;
+    margin-left: 0.5rem;
   }
-  
-  @keyframes animloader {
-    0% {
-        box-shadow: -20px -6px, -7px 0, 7px 0, 20px 0;
-    }
-    33% {
-        box-shadow: -20px 0px, -7px -6px, 7px 0, 20px 0;
-    }
-    66% {
-        box-shadow: -20px 0px, -7px 0, 7px -6px, 20px 0;
-    }
-    100% {
-        box-shadow: -20px 0, -7px 0, 7px 0, 20px -6px;
-    }
-}
+  @keyframes l1 {to{transform: rotate(.5turn)}}
   
         
 

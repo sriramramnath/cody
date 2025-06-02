@@ -48,7 +48,7 @@ import {
   remixProject,
   saveProjectAsCopy,
 } from '../../reducers/project-state'
-import { setIsLoadingState, setIsFirstState } from '../../reducers/vm-status.js'
+import { setIsLoadingState, setIsFirstState, setIsSavingState, setProjectName } from '../../reducers/vm-status.js'
 import {
   openAboutMenu,
   closeAboutMenu,
@@ -245,6 +245,7 @@ class MenuBarGuiSub extends React.Component {
   async fetchProjectData(projectId, fetchapiurl) {
     if (!projectId) return
     this.props.onClickLoadingTrue()
+    this.props.setIsSavingStateTrue()
     try {
       const apiUrl = `${fetchapiurl}/projects/${projectId}`
       const response = await fetch(apiUrl, {
@@ -255,11 +256,14 @@ class MenuBarGuiSub extends React.Component {
         credentials: 'include',
       })
       const data = await response.json()
+      console.log('Fetched project data:', data)
       return data
     } catch (error) {
       this.props.onClickLoadingFalse()
+      this.props.setIsSavingStateFalse()
     } finally {
       this.props.onClickLoadingFalse()
+      this.props.setIsSavingStateFalse()
     }
   }
 
@@ -421,6 +425,8 @@ class MenuBarGuiSub extends React.Component {
 
     this.setState({ currentLayout })
 
+    console.log('scratch console currenytLayout', currentLayout)
+
     try {
       if (currentLayout === 'teacher') {
         result = await this.fetchProjectDataTeacher(
@@ -483,6 +489,7 @@ class MenuBarGuiSub extends React.Component {
       bytes[i] = binaryString.charCodeAt(i)
     }
     await new Promise((resolve) => setTimeout(resolve, 500))
+    console.log('bytes', bytes, bytes.buffer)
     await this.props.vm.loadProject(bytes.buffer)
     this.props.onClickFirstFalse()
   }
@@ -639,16 +646,11 @@ class MenuBarGuiSub extends React.Component {
             </div>
             <FolderIcon className={styles.fileDropDown} />
 
-            {this.props.isSaving && (
+            {/* {this.props.isSaving && (
               <span className={styles.savingState}>
                 Saving data <div className={styles.loader}></div>
               </span>
-            )}
-            {this.props.isLoading && (
-              <span className={styles.loadingState}>
-                Fetching data, please wait <div className={styles.loader}></div>
-              </span>
-            )}
+            )} */}
 
             <MenuBarMenu
               className={classNames(styles.menuBarMenu)}
@@ -676,7 +678,8 @@ class MenuBarGuiSub extends React.Component {
               )}
               <MenuSection>
                 <MenuItem onClick={this.props.onStartSelectingFileUpload}>
-                  {this.props.intl.formatMessage(sharedMessages.loadFromComputerTitle)}
+                  {/* load from your computer */}
+                  {this.props.intl.formatMessage(sharedMessages.loadFromComputerTitle)} 
                 </MenuItem>
                 <SB3Downloader>
                   {(className, downloadProjectCallback) => (
@@ -708,6 +711,17 @@ class MenuBarGuiSub extends React.Component {
             </MenuBarMenu>
           </div>
         )}
+            {this.props.isSavingStatus && (
+                <span className={styles.savingState}>
+                  {this.props.isSavingStatus} {this.props.isSavingStatus === 'Saving project' && <div className={styles.loader}></div>}
+                </span>
+              )}
+        
+            {this.props.isLoading && (
+              <div className={styles.loadingState}>
+                Fetching data, please wait <div className={styles.loader}></div>
+              </div>
+            )}
       </Box>
     )
   }
@@ -740,6 +754,7 @@ const mapStateToProps = (state, ownProps) => {
     modeNow: isTimeTravelNow(state),
     flagClicked: state.scratchGui.vmStatus.flagClicked,
     isSaving: state.scratchGui.vmStatus.isSaving,
+    isSavingStatus: state.scratchGui.vmStatus.isSavingStatus,
     isFirst: state.scratchGui.vmStatus.isFirst,
     isLoading: state.scratchGui.vmStatus.isLoading,
     autoSave: state.scratchGui.vmStatus.autoSave,
@@ -773,6 +788,9 @@ const mapDispatchToProps = (dispatch) => ({
   onClickFirstFalse: () => dispatch(setIsFirstState(false)),
   onClickLoadingFalse: () => dispatch(setIsLoadingState(false)),
   onClickLoadingTrue: () => dispatch(setIsLoadingState(true)),
+  setIsSavingStateTrue: () => dispatch(setIsSavingState(true)),
+  setIsSavingStateFalse: () => dispatch(setIsSavingState(false)),
+  setProjectName: (name) => dispatch(setProjectName(name)),
 })
 
 export default compose(
