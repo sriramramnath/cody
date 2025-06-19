@@ -141,7 +141,7 @@ button::-moz-focus-inner {
 }
 
 .tooltip:after {
-    background-color: $extensions-primary;
+    background-color: $extensions-primary !important;
 }
 
 .coming-soon-tooltip {
